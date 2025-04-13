@@ -1,0 +1,1188 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Filters</title>
+    <link rel="stylesheet" href="{% static 'css/header.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 1rem auto;
+            padding: 0 1rem;
+        }
+
+        .tool-description {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .tool-description h2 {
+            font-size: 1.2rem;
+            color: #2c3e50;
+            margin-bottom: 0.75rem;
+        }
+
+        .tool-description p {
+            color: #6c757d;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .features-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .feature-item i {
+            color: #0d6efd;
+            font-size: 1.1rem;
+            margin-top: 0.2rem;
+        }
+
+        .feature-item span {
+            color: #495057;
+            font-size: 0.9rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+        }
+
+        .upload-section {
+            background: white;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .upload-section:hover {
+            border-color: #0d6efd;
+            background: #f8f9fa;
+        }
+
+        .upload-section i {
+            font-size: 2.5rem;
+            color: #6c757d;
+            margin-bottom: 0.75rem;
+        }
+
+        .upload-section h2 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .upload-section p {
+            color: #6c757d;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .preview-section {
+            display: none;
+            margin-bottom: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .preview-section h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        .preview-container {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .preview-box {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .preview-box h3 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: #495057;
+        }
+
+        .preview-box img {
+            max-width: 100%;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .loading-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 6px;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0d6efd;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .filters-section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .filters-section h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+
+        .search-container {
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            padding-left: 2.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+            display: none;
+        }
+
+        .no-results i {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #dee2e6;
+        }
+
+        .no-results p {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .filter-card {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #dee2e6;
+            position: relative;
+        }
+
+        .filter-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-color: #0d6efd;
+        }
+
+        .filter-card.active {
+            background: #e7f1ff;
+            border-color: #0d6efd;
+        }
+
+        .filter-card i {
+            font-size: 1.5rem;
+            color: #0d6efd;
+            margin-bottom: 0.5rem;
+        }
+
+        .filter-card h3 {
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+            color: #2c3e50;
+        }
+
+        .filter-card p {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin: 0;
+        }
+
+        .btn {
+            background: #0d6efd;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background: #0b5ed7;
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .btn i {
+            font-size: 1rem;
+        }
+
+        .file-info {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 0.5rem auto;
+            }
+
+            .preview-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .filters-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+
+            .features-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include "header.html" %}
+
+    <div class="container">
+        <h1>AI Image Filters</h1>
+        
+        <div class="tool-description">
+            <h2>Transform Your Images with AI</h2>
+            <p>Enhance your photos with our advanced AI-powered filters. Upload any image and apply various artistic effects, from classic filters to modern AI transformations.</p>
+            
+            <div class="features-list">
+                <div class="feature-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>High-quality image processing with AI algorithms</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Multiple artistic filters and effects</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Instant preview of filtered images</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Easy download of processed images</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="upload-section" id="uploadSection">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <h2>Upload Your Image</h2>
+            <p>Drag and drop your image here or click to browse</p>
+            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+            <div class="file-info" id="fileInfo"></div>
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+
+        <div class="preview-section" id="previewSection">
+            <h2>Preview</h2>
+            <div class="preview-container">
+                <div class="preview-box">
+                    <h3>Original</h3>
+                    <img id="originalPreview" src="" alt="Original image">
+                </div>
+                <div class="preview-box">
+                    <h3>Filtered</h3>
+                    <img id="filteredPreview" src="" alt="Filtered image">
+                    <div class="loading-overlay" id="loadingOverlay">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 1rem;">
+                <button class="btn" id="downloadBtn" disabled>
+                    <i class="fas fa-download"></i> Download Filtered Image
+                </button>
+            </div>
+        </div>
+
+        <div class="filters-section">
+            <h2>Available Filters</h2>
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" id="filterSearch" placeholder="Search filters...">
+            </div>
+            <div class="no-results" id="noResults">
+                <i class="fas fa-search"></i>
+                <p>No filters found matching your search</p>
+            </div>
+            <div class="filters-grid">
+                <!-- Basic Filters -->
+                <div class="filter-card" data-filter="enhance">
+                    <i class="fas fa-magic"></i>
+                    <h3>Enhance</h3>
+                    <p>Improve image quality</p>
+                </div>
+                <div class="filter-card" data-filter="cartoon">
+                    <i class="fas fa-paint-brush"></i>
+                    <h3>Cartoon</h3>
+                    <p>Cartoon style effect</p>
+                </div>
+                <div class="filter-card" data-filter="sketch">
+                    <i class="fas fa-pencil-alt"></i>
+                    <h3>Sketch</h3>
+                    <p>Pencil sketch effect</p>
+                </div>
+                <div class="filter-card" data-filter="oil-painting">
+                    <i class="fas fa-palette"></i>
+                    <h3>Oil Painting</h3>
+                    <p>Oil painting effect</p>
+                </div>
+                <div class="filter-card" data-filter="watercolor">
+                    <i class="fas fa-water"></i>
+                    <h3>Watercolor</h3>
+                    <p>Watercolor effect</p>
+                </div>
+                <div class="filter-card" data-filter="vintage">
+                    <i class="fas fa-film"></i>
+                    <h3>Vintage</h3>
+                    <p>Vintage photo effect</p>
+                </div>
+
+                <!-- Artistic Filters -->
+                <div class="filter-card" data-filter="pop-art">
+                    <i class="fas fa-paint-brush"></i>
+                    <h3>Pop Art</h3>
+                    <p>Andy Warhol style</p>
+                </div>
+                <div class="filter-card" data-filter="impressionist">
+                    <i class="fas fa-paint-brush"></i>
+                    <h3>Impressionist</h3>
+                    <p>Monet style effect</p>
+                </div>
+                <div class="filter-card" data-filter="pointillism">
+                    <i class="fas fa-dot-circle"></i>
+                    <h3>Pointillism</h3>
+                    <p>Seurat style dots</p>
+                </div>
+                <div class="filter-card" data-filter="cubism">
+                    <i class="fas fa-cube"></i>
+                    <h3>Cubism</h3>
+                    <p>Picasso style effect</p>
+                </div>
+                <div class="filter-card" data-filter="mosaic">
+                    <i class="fas fa-th-large"></i>
+                    <h3>Mosaic</h3>
+                    <p>Tile mosaic effect</p>
+                </div>
+                <div class="filter-card" data-filter="stained-glass">
+                    <i class="fas fa-glass"></i>
+                    <h3>Stained Glass</h3>
+                    <p>Glass window effect</p>
+                </div>
+
+                <!-- Color Effects -->
+                <div class="filter-card" data-filter="neon">
+                    <i class="fas fa-lightbulb"></i>
+                    <h3>Neon</h3>
+                    <p>Glowing neon effect</p>
+                </div>
+                <div class="filter-card" data-filter="duotone">
+                    <i class="fas fa-palette"></i>
+                    <h3>Duotone</h3>
+                    <p>Two-color effect</p>
+                </div>
+                <div class="filter-card" data-filter="sepia">
+                    <i class="fas fa-camera-retro"></i>
+                    <h3>Sepia</h3>
+                    <p>Classic sepia tone</p>
+                </div>
+                <div class="filter-card" data-filter="infrared">
+                    <i class="fas fa-camera"></i>
+                    <h3>Infrared</h3>
+                    <p>IR photography effect</p>
+                </div>
+                <div class="filter-card" data-filter="x-ray">
+                    <i class="fas fa-x-ray"></i>
+                    <h3>X-Ray</h3>
+                    <p>X-ray photography effect</p>
+                </div>
+                <div class="filter-card" data-filter="thermal">
+                    <i class="fas fa-thermometer-half"></i>
+                    <h3>Thermal</h3>
+                    <p>Heat map effect</p>
+                </div>
+
+                <!-- Texture Effects -->
+                <div class="filter-card" data-filter="paper">
+                    <i class="fas fa-scroll"></i>
+                    <h3>Paper</h3>
+                    <p>Paper texture effect</p>
+                </div>
+                <div class="filter-card" data-filter="canvas">
+                    <i class="fas fa-image"></i>
+                    <h3>Canvas</h3>
+                    <p>Canvas texture effect</p>
+                </div>
+                <div class="filter-card" data-filter="metal">
+                    <i class="fas fa-cog"></i>
+                    <h3>Metal</h3>
+                    <p>Metallic texture effect</p>
+                </div>
+                <div class="filter-card" data-filter="wood">
+                    <i class="fas fa-tree"></i>
+                    <h3>Wood</h3>
+                    <p>Wooden texture effect</p>
+                </div>
+                <div class="filter-card" data-filter="leather">
+                    <i class="fas fa-shoe-prints"></i>
+                    <h3>Leather</h3>
+                    <p>Leather texture effect</p>
+                </div>
+                <div class="filter-card" data-filter="fabric">
+                    <i class="fas fa-tshirt"></i>
+                    <h3>Fabric</h3>
+                    <p>Fabric texture effect</p>
+                </div>
+
+                <!-- Special Effects -->
+                <div class="filter-card" data-filter="hologram">
+                    <i class="fas fa-rainbow"></i>
+                    <h3>Hologram</h3>
+                    <p>Holographic effect</p>
+                </div>
+                <div class="filter-card" data-filter="glitch">
+                    <i class="fas fa-bug"></i>
+                    <h3>Glitch</h3>
+                    <p>Digital glitch effect</p>
+                </div>
+                <div class="filter-card" data-filter="pixelate">
+                    <i class="fas fa-th-large"></i>
+                    <h3>Pixelate</h3>
+                    <p>Pixel art effect</p>
+                </div>
+                <div class="filter-card" data-filter="ascii">
+                    <i class="fas fa-terminal"></i>
+                    <h3>ASCII Art</h3>
+                    <p>Text art effect</p>
+                </div>
+                <div class="filter-card" data-filter="emboss">
+                    <i class="fas fa-cube"></i>
+                    <h3>Emboss</h3>
+                    <p>3D emboss effect</p>
+                </div>
+                <div class="filter-card" data-filter="relief">
+                    <i class="fas fa-mountain"></i>
+                    <h3>Relief</h3>
+                    <p>3D relief effect</p>
+                </div>
+
+                <!-- Lighting Effects -->
+                <div class="filter-card" data-filter="spotlight">
+                    <i class="fas fa-lightbulb"></i>
+                    <h3>Spotlight</h3>
+                    <p>Spotlight effect</p>
+                </div>
+                <div class="filter-card" data-filter="rays">
+                    <i class="fas fa-sun"></i>
+                    <h3>Rays</h3>
+                    <p>Light rays effect</p>
+                </div>
+                <div class="filter-card" data-filter="lens-flare">
+                    <i class="fas fa-camera"></i>
+                    <h3>Lens Flare</h3>
+                    <p>Camera lens flare</p>
+                </div>
+                <div class="filter-card" data-filter="vignette">
+                    <i class="fas fa-circle"></i>
+                    <h3>Vignette</h3>
+                    <p>Dark edges effect</p>
+                </div>
+                <div class="filter-card" data-filter="halo">
+                    <i class="fas fa-circle"></i>
+                    <h3>Halo</h3>
+                    <p>Glowing halo effect</p>
+                </div>
+                <div class="filter-card" data-filter="bloom">
+                    <i class="fas fa-sparkles"></i>
+                    <h3>Bloom</h3>
+                    <p>Glow bloom effect</p>
+                </div>
+
+                <!-- Weather Effects -->
+                <div class="filter-card" data-filter="rain">
+                    <i class="fas fa-cloud-rain"></i>
+                    <h3>Rain</h3>
+                    <p>Rain effect</p>
+                </div>
+                <div class="filter-card" data-filter="snow">
+                    <i class="fas fa-snowflake"></i>
+                    <h3>Snow</h3>
+                    <p>Snow effect</p>
+                </div>
+                <div class="filter-card" data-filter="fog">
+                    <i class="fas fa-cloud"></i>
+                    <h3>Fog</h3>
+                    <p>Foggy effect</p>
+                </div>
+                <div class="filter-card" data-filter="mist">
+                    <i class="fas fa-cloud"></i>
+                    <h3>Mist</h3>
+                    <p>Misty effect</p>
+                </div>
+                <div class="filter-card" data-filter="heat-wave">
+                    <i class="fas fa-sun"></i>
+                    <h3>Heat Wave</h3>
+                    <p>Heat distortion effect</p>
+                </div>
+                <div class="filter-card" data-filter="frost">
+                    <i class="fas fa-icicles"></i>
+                    <h3>Frost</h3>
+                    <p>Frosty effect</p>
+                </div>
+
+                <!-- Time Effects -->
+                <div class="filter-card" data-filter="day">
+                    <i class="fas fa-sun"></i>
+                    <h3>Day</h3>
+                    <p>Bright daylight effect</p>
+                </div>
+                <div class="filter-card" data-filter="night">
+                    <i class="fas fa-moon"></i>
+                    <h3>Night</h3>
+                    <p>Night time effect</p>
+                </div>
+                <div class="filter-card" data-filter="sunset">
+                    <i class="fas fa-sun"></i>
+                    <h3>Sunset</h3>
+                    <p>Warm sunset effect</p>
+                </div>
+                <div class="filter-card" data-filter="dawn">
+                    <i class="fas fa-sun"></i>
+                    <h3>Dawn</h3>
+                    <p>Early morning effect</p>
+                </div>
+                <div class="filter-card" data-filter="dusk">
+                    <i class="fas fa-moon"></i>
+                    <h3>Dusk</h3>
+                    <p>Evening effect</p>
+                </div>
+                <div class="filter-card" data-filter="moonlight">
+                    <i class="fas fa-moon"></i>
+                    <h3>Moonlight</h3>
+                    <p>Moonlit effect</p>
+                </div>
+
+                <!-- Cinematic Filters -->
+                <div class="filter-card" data-filter="cinematic">
+                    <i class="fas fa-film"></i>
+                    <h3>Cinematic</h3>
+                    <p>Movie-like effect</p>
+                </div>
+                <div class="filter-card" data-filter="drama">
+                    <i class="fas fa-theater-masks"></i>
+                    <h3>Drama</h3>
+                    <p>High contrast effect</p>
+                </div>
+                <div class="filter-card" data-filter="noir">
+                    <i class="fas fa-film"></i>
+                    <h3>Noir</h3>
+                    <p>Film noir style</p>
+                </div>
+                <div class="filter-card" data-filter="silver-screen">
+                    <i class="fas fa-film"></i>
+                    <h3>Silver Screen</h3>
+                    <p>Classic movie look</p>
+                </div>
+                <div class="filter-card" data-filter="technicolor">
+                    <i class="fas fa-palette"></i>
+                    <h3>Technicolor</h3>
+                    <p>Vintage color film</p>
+                </div>
+                <div class="filter-card" data-filter="kodachrome">
+                    <i class="fas fa-camera-retro"></i>
+                    <h3>Kodachrome</h3>
+                    <p>Classic slide film</p>
+                </div>
+
+                <!-- Portrait Filters -->
+                <div class="filter-card" data-filter="portrait">
+                    <i class="fas fa-user"></i>
+                    <h3>Portrait</h3>
+                    <p>Professional portrait</p>
+                </div>
+                <div class="filter-card" data-filter="beauty">
+                    <i class="fas fa-magic"></i>
+                    <h3>Beauty</h3>
+                    <p>Skin smoothing</p>
+                </div>
+                <div class="filter-card" data-filter="glamour">
+                    <i class="fas fa-star"></i>
+                    <h3>Glamour</h3>
+                    <p>Glamorous look</p>
+                </div>
+                <div class="filter-card" data-filter="vintage-portrait">
+                    <i class="fas fa-camera-retro"></i>
+                    <h3>Vintage Portrait</h3>
+                    <p>Classic portrait style</p>
+                </div>
+                <div class="filter-card" data-filter="high-key">
+                    <i class="fas fa-sun"></i>
+                    <h3>High Key</h3>
+                    <p>Bright portrait style</p>
+                </div>
+                <div class="filter-card" data-filter="low-key">
+                    <i class="fas fa-moon"></i>
+                    <h3>Low Key</h3>
+                    <p>Dark portrait style</p>
+                </div>
+
+                <!-- Landscape Filters -->
+                <div class="filter-card" data-filter="landscape">
+                    <i class="fas fa-mountain"></i>
+                    <h3>Landscape</h3>
+                    <p>Enhanced scenery</p>
+                </div>
+                <div class="filter-card" data-filter="hdr-landscape">
+                    <i class="fas fa-mountain"></i>
+                    <h3>HDR Landscape</h3>
+                    <p>High dynamic range</p>
+                </div>
+                <div class="filter-card" data-filter="golden-hour">
+                    <i class="fas fa-sun"></i>
+                    <h3>Golden Hour</h3>
+                    <p>Warm sunset light</p>
+                </div>
+                <div class="filter-card" data-filter="blue-hour">
+                    <i class="fas fa-moon"></i>
+                    <h3>Blue Hour</h3>
+                    <p>Twilight effect</p>
+                </div>
+                <div class="filter-card" data-filter="dramatic-sky">
+                    <i class="fas fa-cloud"></i>
+                    <h3>Dramatic Sky</h3>
+                    <p>Enhanced clouds</p>
+                </div>
+                <div class="filter-card" data-filter="autumn">
+                    <i class="fas fa-leaf"></i>
+                    <h3>Autumn</h3>
+                    <p>Fall colors</p>
+                </div>
+
+                <!-- Color Grading Filters -->
+                <div class="filter-card" data-filter="teal-orange">
+                    <i class="fas fa-palette"></i>
+                    <h3>Teal & Orange</h3>
+                    <p>Hollywood look</p>
+                </div>
+                <div class="filter-card" data-filter="cool-blue">
+                    <i class="fas fa-palette"></i>
+                    <h3>Cool Blue</h3>
+                    <p>Cool tone effect</p>
+                </div>
+                <div class="filter-card" data-filter="warm-gold">
+                    <i class="fas fa-palette"></i>
+                    <h3>Warm Gold</h3>
+                    <p>Golden hour look</p>
+                </div>
+                <div class="filter-card" data-filter="muted">
+                    <i class="fas fa-palette"></i>
+                    <h3>Muted</h3>
+                    <p>Soft color palette</p>
+                </div>
+                <div class="filter-card" data-filter="vibrant">
+                    <i class="fas fa-palette"></i>
+                    <h3>Vibrant</h3>
+                    <p>Color pop effect</p>
+                </div>
+                <div class="filter-card" data-filter="pastel">
+                    <i class="fas fa-palette"></i>
+                    <h3>Pastel</h3>
+                    <p>Soft color tones</p>
+                </div>
+
+                <!-- Artistic Style Filters -->
+                <div class="filter-card" data-filter="oil-painting">
+                    <i class="fas fa-paint-brush"></i>
+                    <h3>Oil Painting</h3>
+                    <p>Classic art style</p>
+                </div>
+                <div class="filter-card" data-filter="watercolor">
+                    <i class="fas fa-paint-brush"></i>
+                    <h3>Watercolor</h3>
+                    <p>Soft art style</p>
+                </div>
+                <div class="filter-card" data-filter="acrylic">
+                    <i class="fas fa-paint-brush"></i>
+                    <h3>Acrylic</h3>
+                    <p>Bold art style</p>
+                </div>
+                <div class="filter-card" data-filter="charcoal">
+                    <i class="fas fa-pencil-alt"></i>
+                    <h3>Charcoal</h3>
+                    <p>Sketch art style</p>
+                </div>
+                <div class="filter-card" data-filter="ink">
+                    <i class="fas fa-pen"></i>
+                    <h3>Ink</h3>
+                    <p>Drawing style</p>
+                </div>
+                <div class="filter-card" data-filter="pencil">
+                    <i class="fas fa-pencil-alt"></i>
+                    <h3>Pencil</h3>
+                    <p>Sketch style</p>
+                </div>
+
+                <!-- Special Effects -->
+                <div class="filter-card" data-filter="double-exposure">
+                    <i class="fas fa-camera"></i>
+                    <h3>Double Exposure</h3>
+                    <p>Multiple image blend</p>
+                </div>
+                <div class="filter-card" data-filter="tilt-shift">
+                    <i class="fas fa-camera"></i>
+                    <h3>Tilt Shift</h3>
+                    <p>Miniature effect</p>
+                </div>
+                <div class="filter-card" data-filter="cross-process">
+                    <i class="fas fa-film"></i>
+                    <h3>Cross Process</h3>
+                    <p>Film development effect</p>
+                </div>
+                <div class="filter-card" data-filter="lomo">
+                    <i class="fas fa-camera-retro"></i>
+                    <h3>Lomo</h3>
+                    <p>Lomo camera effect</p>
+                </div>
+                <div class="filter-card" data-filter="polaroid">
+                    <i class="fas fa-camera-retro"></i>
+                    <h3>Polaroid</h3>
+                    <p>Instant film look</p>
+                </div>
+                <div class="filter-card" data-filter="holga">
+                    <i class="fas fa-camera-retro"></i>
+                    <h3>Holga</h3>
+                    <p>Toy camera effect</p>
+                </div>
+
+                <!-- Mood Filters -->
+                <div class="filter-card" data-filter="melancholic">
+                    <i class="fas fa-cloud-rain"></i>
+                    <h3>Melancholic</h3>
+                    <p>Sad mood effect</p>
+                </div>
+                <div class="filter-card" data-filter="nostalgic">
+                    <i class="fas fa-history"></i>
+                    <h3>Nostalgic</h3>
+                    <p>Memory effect</p>
+                </div>
+                <div class="filter-card" data-filter="romantic">
+                    <i class="fas fa-heart"></i>
+                    <h3>Romantic</h3>
+                    <p>Love mood effect</p>
+                </div>
+                <div class="filter-card" data-filter="mysterious">
+                    <i class="fas fa-moon"></i>
+                    <h3>Mysterious</h3>
+                    <p>Mystery effect</p>
+                </div>
+                <div class="filter-card" data-filter="dreamy">
+                    <i class="fas fa-cloud"></i>
+                    <h3>Dreamy</h3>
+                    <p>Dream effect</p>
+                </div>
+                <div class="filter-card" data-filter="dramatic">
+                    <i class="fas fa-theater-masks"></i>
+                    <h3>Dramatic</h3>
+                    <p>Drama effect</p>
+                </div>
+
+                <!-- Modern Filters -->
+                <div class="filter-card" data-filter="instagram">
+                    <i class="fab fa-instagram"></i>
+                    <h3>Instagram</h3>
+                    <p>Social media look</p>
+                </div>
+                <div class="filter-card" data-filter="vintage-modern">
+                    <i class="fas fa-camera-retro"></i>
+                    <h3>Vintage Modern</h3>
+                    <p>Retro-modern blend</p>
+                </div>
+                <div class="filter-card" data-filter="minimalist">
+                    <i class="fas fa-minus-circle"></i>
+                    <h3>Minimalist</h3>
+                    <p>Simple clean look</p>
+                </div>
+                <div class="filter-card" data-filter="urban">
+                    <i class="fas fa-city"></i>
+                    <h3>Urban</h3>
+                    <p>City style</p>
+                </div>
+                <div class="filter-card" data-filter="cyberpunk">
+                    <i class="fas fa-robot"></i>
+                    <h3>Cyberpunk</h3>
+                    <p>Futuristic look</p>
+                </div>
+                <div class="filter-card" data-filter="retrowave">
+                    <i class="fas fa-music"></i>
+                    <h3>Retrowave</h3>
+                    <p>80s synth style</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadSection = document.getElementById('uploadSection');
+            const imageInput = document.getElementById('imageInput');
+            const previewSection = document.getElementById('previewSection');
+            const originalPreview = document.getElementById('originalPreview');
+            const filteredPreview = document.getElementById('filteredPreview');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const filterCards = document.querySelectorAll('.filter-card');
+            const fileInfo = document.getElementById('fileInfo');
+            const errorMessage = document.getElementById('errorMessage');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const filterSearch = document.getElementById('filterSearch');
+            const noResults = document.getElementById('noResults');
+
+            const filterCategories = {
+                'artistic': ['cartoon', 'oil-painting', 'watercolor', 'sketch', 'impressionist', 'pointillism', 'cubism'],
+                'color': ['neon', 'duotone', 'sepia', 'infrared', 'x-ray', 'thermal'],
+                'texture': ['paper', 'canvas', 'metal', 'wood', 'leather', 'fabric'],
+                'weather': ['rain', 'snow', 'fog', 'mist', 'heat-wave', 'frost'],
+                'time': ['day', 'night', 'sunset', 'dawn', 'dusk', 'moonlight'],
+                'modern': ['instagram', 'minimalist', 'retrowave', 'urban', 'cyberpunk']
+            };
+
+            // Search functionality
+            filterSearch.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                let hasVisibleCards = false;
+
+                filterCards.forEach(card => {
+                    const title = card.querySelector('h3').textContent.toLowerCase();
+                    const description = card.querySelector('p').textContent.toLowerCase();
+                    
+                    if (title.includes(searchTerm) || description.includes(searchTerm)) {
+                        card.style.display = 'block';
+                        hasVisibleCards = true;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+
+                // Show/hide no results message
+                noResults.style.display = hasVisibleCards ? 'none' : 'block';
+            });
+
+            // Handle file upload
+            uploadSection.addEventListener('click', () => imageInput.click());
+            uploadSection.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadSection.style.borderColor = '#0d6efd';
+            });
+            uploadSection.addEventListener('dragleave', () => {
+                uploadSection.style.borderColor = '#dee2e6';
+            });
+            uploadSection.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadSection.style.borderColor = '#dee2e6';
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    handleImageUpload(file);
+                } else {
+                    showError('Please upload a valid image file');
+                }
+            });
+
+            imageInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.type.startsWith('image/')) {
+                        handleImageUpload(file);
+                    } else {
+                        showError('Please upload a valid image file');
+                    }
+                }
+            });
+
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                errorMessage.classList.add('error-animation');
+                
+                setTimeout(() => {
+                    errorMessage.classList.remove('error-animation');
+                    errorMessage.style.display = 'none';
+                }, 3000);
+            }
+
+            function handleImageUpload(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Create canvas for resizing
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Calculate new dimensions (max 1920px width/height)
+                        let width = img.width;
+                        let height = img.height;
+                        const maxSize = 1920;
+                        
+                        if (width > height && width > maxSize) {
+                            height = Math.round((height * maxSize) / width);
+                            width = maxSize;
+                        } else if (height > maxSize) {
+                            width = Math.round((width * maxSize) / height);
+                            height = maxSize;
+                        }
+                        
+                        // Set canvas dimensions
+                        canvas.width = width;
+                        canvas.height = height;
+                        
+                        // Draw and resize image
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Convert to JPEG with compression
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                        
+                        // Update preview
+                        originalPreview.src = compressedDataUrl;
+                        previewSection.style.display = 'block';
+                        downloadBtn.disabled = true;
+                        fileInfo.textContent = `File: ${file.name} (${formatFileSize(file.size)})`;
+                        errorMessage.style.display = 'none';
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            async function applyImageFilter(filterType) {
+                if (!originalPreview.src) {
+                    showError('Please upload an image first');
+                    return;
+                }
+
+                const activeCard = document.querySelector(`.filter-card[data-filter="${filterType}"]`);
+                if (!activeCard) return;
+
+                // Remove active state from all cards
+                filterCards.forEach(c => c.classList.remove('active'));
+                // Add active state to clicked card
+                activeCard.classList.add('active');
+                
+                // Show loading overlay
+                loadingOverlay.style.display = 'flex';
+                
+                try {
+                    const base64Data = originalPreview.src.split(',')[1];
+                    
+                    const response = await fetch('/api/apply-filter/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            image: base64Data,
+                            filter: filterType
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        filteredPreview.src = data.image;
+                        downloadBtn.disabled = false;
+                        
+                        if (data.filterInfo) {
+                            showFilterInfo(data.filterInfo);
+                        }
+                    } else {
+                        throw new Error(data.error || 'Failed to apply filter');
+                    }
+                } catch (error) {
+                    console.error('Filter error:', error);
+                    showError(error.message || 'Error applying filter. Please try again.');
+                    activeCard.classList.remove('active');
+                } finally {
+                    loadingOverlay.style.display = 'none';
+                }
+            }
+
+            function showFilterInfo(info) {
+                const infoDiv = document.getElementById('filterInfo') || document.createElement('div');
+                infoDiv.id = 'filterInfo';
+                infoDiv.innerHTML = `
+                    <div class="filter-info">
+                        <h4>Filter Details</h4>
+                        <p>${info}</p>
+                    </div>
+                `;
+                
+                const previewSection = document.getElementById('previewSection');
+                if (!document.getElementById('filterInfo')) {
+                    previewSection.appendChild(infoDiv);
+                }
+            }
+
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes errorShake {
+                    0%, 100% { transform: translateX(0); }
+                    25% { transform: translateX(-10px); }
+                    75% { transform: translateX(10px); }
+                }
+                .error-animation {
+                    animation: errorShake 0.5s ease-in-out;
+                }
+            `;
+            document.head.appendChild(style);
+
+            filterCards.forEach(card => {
+                card.addEventListener('click', async () => {
+                    const filterType = card.dataset.filter;
+                    await applyImageFilter(filterType);
+                });
+            });
+
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            downloadBtn.addEventListener('click', () => {
+                if (!filteredPreview.src) return;
+                
+                const link = document.createElement('a');
+                link.href = filteredPreview.src;
+                link.download = 'filtered-image.jpg';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        });
+    </script>
+</body>
+</html>

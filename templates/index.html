@@ -1,0 +1,144 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AImagine - AI Image Tools</title>
+    <link rel="stylesheet" href="{% static 'css/header.css' %}">
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    {% include "header.html" %}
+    <main>
+        <div class="hero">
+            <h1>AI-Powered Image Tools</h1>
+            <p>Transform your images with our comprehensive suite of AI-enhanced tools. Fast, easy, and powerful.</p>
+            
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search for tools..." id="searchTools">
+            </div>
+        </div>
+
+        <div class="tools-grid">
+            <a href="crop" class="tool-card">
+                <div class="tool-icon">
+                    <i class="fas fa-crop-alt"></i>
+                </div>
+                <h3 class="tool-title">Smart Crop</h3>
+                <p class="tool-desc">AI-powered intelligent cropping for perfect compositions</p>
+            </a>
+
+            <a href="image-compression" class="tool-card">
+                <div class="tool-icon">
+                    <i class="fas fa-compress-arrows-alt"></i>
+                </div>
+                <h3 class="tool-title">Image Compression</h3>
+                <p class="tool-desc">Reduce file size without losing quality</p>
+            </a>
+
+            <a href="passport-size-image" class="tool-card">
+                <div class="tool-icon">
+                    <i class="fas fa-id-card"></i>
+                </div>
+                <h3 class="tool-title">Passport Size Photo</h3>
+                <p class="tool-desc">Create passport photos that meet official requirements</p>
+            </a>
+
+            <a href="enhancer" class="tool-card">
+                <div class="tool-icon">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                </div>
+                <h3 class="tool-title">AI Enhancement</h3>
+                <p class="tool-desc">Enhance image quality and resolution</p>
+            </a>
+
+            <a href="background_removal" class="tool-card">
+                <div class="tool-icon">
+                    <i class="fas fa-cut"></i>
+                </div>
+                <h3 class="tool-title">Background Remove</h3>
+                <p class="tool-desc">Remove background with AI precision</p>
+            </a>
+
+            <a href="aiFilters" class="tool-card">
+                <div class="tool-icon">
+                    <i class="fas fa-images"></i>
+                </div>
+                <h3 class="tool-title">AI Filters</h3>
+                <p class="tool-desc">Apply smart filters and effects</p>
+            </a>
+
+            <a href="restore-photo" class="tool-card">
+                <div class="tool-icon">
+                    <i class="fas fa-clock-rotate-left"></i>
+                </div>
+                <h3 class="tool-title">Photo Restore</h3>
+                <p class="tool-desc">Restore old and damaged photos</p>
+            </a>
+
+            <a href="watermark" class="tool-card">
+                <div class="tool-icon">
+                    <i class="fas fa-copyright"></i>
+                </div>
+                <h3 class="tool-title">Watermark</h3>
+                <p class="tool-desc">Add custom watermarks to protect your images</p>
+            </a>
+
+            <a href="formate-convert" class="tool-card">
+                <div class="tool-icon">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <h3 class="tool-title">Format Converter</h3>
+                <p class="tool-desc">Convert between image formats</p>
+            </a>
+
+            <a href="/tools/optimize" class="tool-card">
+                <div class="tool-icon">
+                    <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <h3 class="tool-title">Web Optimizer</h3>
+                <p class="tool-desc">Optimize images for web performance</p>
+            </a>
+        </div>
+    </main>
+
+    <script>
+        // Enhance search functionality with debounce
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        const searchInput = document.getElementById('searchTools');
+        const toolCards = document.querySelectorAll('.tool-card');
+
+        const performSearch = debounce((searchTerm) => {
+            toolCards.forEach(card => {
+                const title = card.querySelector('.tool-title').textContent.toLowerCase();
+                const desc = card.querySelector('.tool-desc').textContent.toLowerCase();
+                
+                if (title.includes(searchTerm) || desc.includes(searchTerm)) {
+                    card.style.display = 'block';
+                    card.style.animation = 'fadeIn 0.4s ease forwards';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }, 300);
+
+        searchInput.addEventListener('input', (e) => {
+            performSearch(e.target.value.toLowerCase());
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Smart Crop - AI Image Processing{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+<link rel="stylesheet" href="{% static 'css/crop.css' %}">
+{% endblock %}
+
+{% block header %}
+{% endblock %}
+
+{% block content %}
+<div class="crop-container">
+    <div class="header-section">
+        <h1>Smart Crop</h1>
+        <p>AI-powered intelligent cropping for perfect compositions</p>
+    </div>
+
+    <div class="upload-container">
+        <form method="POST" enctype="multipart/form-data" id="uploadForm">
+            {% csrf_token %}
+            <div class="drop-zone" id="dropZone">
+                <input type="file" name="image" id="fileInput" accept="image/*" hidden>
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Drag and drop your image here or click to browse</p>
+                <p class="small text-muted">Supported formats: JPG, PNG (Max size: 10MB)</p>
+            </div>
+        </form>
+    </div>
+
+    <div id="loading-indicator" style="display: none;">
+        Processing image...
+    </div>
+    <div id="error-message" class="alert alert-danger" style="display: none;"></div>
+
+    <div class="preview-container" id="previewContainer">
+        <div class="preview-image-wrapper">
+            <img src="" alt="Preview" class="preview-image" id="previewImage">
+        </div>
+        <div id="cropError" class="alert alert-danger" style="display: none;"></div>
+        <div class="controls">
+            <div class="crop-options">
+                <select class="form-select" id="cropMethod">
+                    <option value="free">Free Form</option>
+                    <option value="fixed">Fixed Size</option>
+                    <option value="aspect">Aspect Ratio</option>
+                    <option value="preset">Preset Sizes</option>
+                </select>
+                
+                <select class="form-select" id="presetSizes" style="display: none;">
+                    <option value="">Select Platform</option>
+                    <optgroup label="YouTube">
+                        <option value="1280x720">Thumbnail (1280×720)</option>
+                        <option value="2560x1440">Thumbnail HD (2560×1440)</option>
+                    </optgroup>
+                    <optgroup label="Facebook">
+                        <option value="851x315">Cover Page (851×315)</option>
+                        <option value="1200x630">Shared Post (1200×630)</option>
+                    </optgroup>
+                    <optgroup label="LinkedIn">
+                        <option value="1080x1350">Portrait Post (1080×1350)</option>
+                        <option value="1104x736">Blog Post (1104×736)</option>
+                    </optgroup>
+                    <optgroup label="Instagram">
+                        <option value="1080x1080">Square Post (1080×1080)</option>
+                        <option value="1080x1350">Portrait Post (1080×1350)</option>
+                        <option value="1080x608">Landscape Post (1080×608)</option>
+                    </optgroup>
+                    <optgroup label="Twitter">
+                        <option value="1500x500">Header (1500×500)</option>
+                        <option value="1200x675">Post Image (1200×675)</option>
+                    </optgroup>
+                </select>
+
+                <div id="sizeInputs" class="size-inputs" style="display: none;">
+                    <input type="number" id="cropWidth" placeholder="Width (px)" class="form-control">
+                    <input type="number" id="cropHeight" placeholder="Height (px)" class="form-control">
+                </div>
+                <select class="form-select" id="aspectRatio" style="display: none;">
+                    <option value="1:1">1:1 (Square)</option>
+                    <option value="16:9">16:9 (Landscape)</option>
+                    <option value="4:3">4:3 (Standard)</option>
+                    <option value="3:2">3:2 (Classic)</option>
+                </select>
+
+                <div class="rotate-controls">
+                    <button class="btn btn-secondary" id="rotateLeft" title="Rotate Left">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button class="btn btn-secondary" id="rotateRight" title="Rotate Right">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                    <input type="number" id="rotateAngle" class="form-control" placeholder="°" min="-180" max="180">
+                </div>
+            </div>
+            <button class="btn btn-primary" id="cropBtn">
+                <i class="fas fa-crop-alt"></i>
+                <span>Crop Image</span>
+            </button>
+            <button class="btn btn-secondary" id="resetBtn">
+                <i class="fas fa-undo"></i>
+                <span>Reset</span>
+            </button>
+            <button class="btn btn-success" id="downloadBtn" style="display: none;">
+                <i class="fas fa-download"></i>
+                <span>Download</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const cropBtn = document.getElementById('cropBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const cropMethod = document.getElementById('cropMethod');
+        const sizeInputs = document.getElementById('sizeInputs');
+        const aspectRatio = document.getElementById('aspectRatio');
+        const cropWidth = document.getElementById('cropWidth');
+        const cropHeight = document.getElementById('cropHeight');
+        const presetSizes = document.getElementById('presetSizes');
+        const rotateLeft = document.getElementById('rotateLeft');
+        const rotateRight = document.getElementById('rotateRight');
+        const rotateAngle = document.getElementById('rotateAngle');
+        const downloadBtn = document.getElementById('downloadBtn');
+        let cropper = null;
+    
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#2980b9';
+        });
+    
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.borderColor = '#3498db';
+        });
+    
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const file = e.dataTransfer.files[0];
+            handleFile(file);
+        });
+    
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            handleFile(file);
+        });
+    
+        function handleFile(file) {
+            if (!file) return;
+    
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/png'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please upload a valid image file (JPG or PNG)');
+                return;
+            }
+    
+            // Validate file size (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Image size should be less than 10MB');
+                return;
+            }
+    
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    previewImage.src = e.target.result;
+                    previewContainer.classList.add('active');
+                    
+                    // Initialize cropper
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+                    cropper = new Cropper(previewImage, {
+                        aspectRatio: NaN,
+                        viewMode: 2,
+                        autoCropArea: 1,
+                    });
+                };
+                img.onerror = () => {
+                    alert('Failed to load image. Please try another file.');
+                };
+                img.src = e.target.result;
+            };
+            reader.onerror = () => {
+                alert('Failed to read file. Please try again.');
+            };
+            reader.readAsDataURL(file);
+        }
+    
+        cropMethod.addEventListener('change', function() {
+            switch(this.value) {
+                case 'free':
+                    sizeInputs.style.display = 'none';
+                    aspectRatio.style.display = 'none';
+                    presetSizes.style.display = 'none';
+                    if (cropper) {
+                        cropper.setAspectRatio(NaN);
+                    }
+                    break;
+                case 'fixed':
+                    sizeInputs.style.display = 'flex';
+                    aspectRatio.style.display = 'none';
+                    presetSizes.style.display = 'none';
+                    break;
+                case 'aspect':
+                    sizeInputs.style.display = 'none';
+                    aspectRatio.style.display = 'block';
+                    presetSizes.style.display = 'none';
+                    break;
+                case 'preset':
+                    sizeInputs.style.display = 'none';
+                    aspectRatio.style.display = 'none';
+                    presetSizes.style.display = 'block';
+                    break;
+                default:
+                    presetSizes.style.display = 'none';
+            }
+        });
+    
+        aspectRatio.addEventListener('change', function() {
+            if (!cropper) return;
+            const [width, height] = this.value.split(':');
+            cropper.setAspectRatio(width/height);
+        });
+    
+        presetSizes.addEventListener('change', function() {
+            if (!cropper || !this.value) return;
+            const [width, height] = this.value.split('x').map(Number);
+            cropper.setAspectRatio(width/height);
+            cropWidth.value = width;
+            cropHeight.value = height;
+        });
+    
+        rotateLeft.addEventListener('click', () => {
+            if (cropper) cropper.rotate(-90);
+        });
+    
+        rotateRight.addEventListener('click', () => {
+            if (cropper) cropper.rotate(90);
+        });
+    
+        rotateAngle.addEventListener('change', function() {
+            if (!cropper) return;
+            const angle = parseFloat(this.value) || 0;
+            if (angle >= -180 && angle <= 180) {
+                cropper.rotateTo(angle);
+            }
+        });
+    
+        cropBtn.addEventListener('click', function() {
+            if (!cropper) return;
+    
+            const cropData = cropper.getData();
+            const formData = new FormData();
+            const file = fileInput.files[0];
+    
+            if (!file) {
+                alert('Please select an image first');
+                return;
+            }
+    
+            // Show loading state
+            cropBtn.disabled = true;
+            cropBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    
+            formData.append('image', file);
+            formData.append('x', cropData.x);
+            formData.append('y', cropData.y);
+            formData.append('width', cropData.width);
+            formData.append('height', cropData.height);
+            formData.append('crop_method', cropMethod.value);
+            formData.append('rotate', cropper.getData().rotate || 0);
+            
+            if (cropMethod.value === 'fixed' || cropMethod.value === 'preset') {
+                formData.append('target_width', cropWidth.value);
+                formData.append('target_height', cropHeight.value);
+            }
+    
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+            fetch('{% url "crop" %}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    previewImage.src = data.image_url;
+                    if (cropper) {
+                        cropper.destroy();
+                        cropper = null;
+                    }
+                    // Show download button
+                    downloadBtn.style.display = 'inline-flex';
+                    downloadBtn.onclick = () => {
+                        const filename = data.filename || 'cropped-image.png';
+                        downloadImage(data.image_url, filename);
+                    };
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to process image'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing the image');
+            })
+            .finally(() => {
+                // Reset button state
+                cropBtn.disabled = false;
+                cropBtn.innerHTML = '<i class="fas fa-crop-alt"></i> <span>Crop Image</span>';
+            });
+        });
+    
+        resetBtn.addEventListener('click', function() {
+            if (cropper) {
+                cropper.reset();
+            }
+            downloadBtn.style.display = 'none';
+        });
+    
+        function downloadImage(url, filename) {
+            fetch(url)
+                .then(response => response.blob())
+                .then(blob => {
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                    window.URL.revokeObjectURL(link.href);
+                })
+                .catch(error => {
+                    console.error('Download failed:', error);
+                    alert('Failed to download image');
+                });
+        }
+    });
+</script>
+{% endblock %}

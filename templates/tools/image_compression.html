@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Compression Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <style>
+        .drop-zone {
+            transition: all 0.3s ease;
+        }
+        .drop-zone.dragover {
+            background: #e2e8f0;
+            transform: scale(1.02);
+        }
+        .preview-image {
+            transition: transform 0.3s ease;
+        }
+        .preview-image:hover {
+            transform: scale(1.05);
+        }
+        .cropper-container {
+            max-height: 500px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">Image Compression Tool</h1>
+        
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-3xl mx-auto">
+            <div id="drop-zone" class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-6">
+                <div class="space-y-4">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <div class="text-gray-600">
+                        <p class="font-medium">Drag and drop your image here</p>
+                        <p class="text-sm">or</p>
+                    </div>
+                    <input type="file" id="file-input" class="hidden" accept="image/*">
+                    <button onclick="document.getElementById('file-input').click()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-300">
+                        Select Image
+                    </button>
+                </div>
+            </div>
+
+            <div id="preview-container" class="hidden space-y-6">
+                <div id="crop-container" class="hidden">
+                    <h3 class="text-lg font-semibold mb-2">Select Area</h3>
+                    <div class="cropper-container">
+                        <img id="crop-image" class="max-w-full" src="" alt="Crop">
+                    </div>
+                    <div class="flex gap-2 mt-4">
+                        <button id="crop-btn" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition duration-300">
+                            Crop Image
+                        </button>
+                        <button id="reset-crop-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-300">
+                            Reset
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold mb-2">Original</h3>
+                        <img id="original-preview" class="preview-image w-full rounded-lg shadow-md" src="" alt="Original">
+                        <p class="text-sm text-gray-500 mt-2">Size: <span id="original-size">0 KB</span></p>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold mb-2">Compressed</h3>
+                        <img id="compressed-preview" class="preview-image w-full rounded-lg shadow-md" src="" alt="Compressed">
+                        <p class="text-sm text-gray-500 mt-2">Size: <span id="compressed-size">0 KB</span></p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Quality</label>
+                        <input type="range" id="quality" min="0" max="100" value="75" class="w-full">
+                        <div class="flex justify-between text-sm text-gray-500">
+                            <span>Lower quality</span>
+                            <span>Higher quality</span>
+                        </div>
+                    </div>
+
+                    <button id="compress-btn" class="w-full bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition duration-300">
+                        Compress Image
+                    </button>
+                    
+                    <button id="download-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition duration-300 hidden">
+                        Download Compressed Image
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const previewContainer = document.getElementById('preview-container');
+        const originalPreview = document.getElementById('original-preview');
+        const compressedPreview = document.getElementById('compressed-preview');
+        const originalSize = document.getElementById('original-size');
+        const compressedSize = document.getElementById('compressed-size');
+        const qualitySlider = document.getElementById('quality');
+        const compressBtn = document.getElementById('compress-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const cropContainer = document.getElementById('crop-container');
+        const cropImage = document.getElementById('crop-image');
+        const cropBtn = document.getElementById('crop-btn');
+        const resetCropBtn = document.getElementById('reset-crop-btn');
+        let cropper = null;
+
+        // Drag and drop handlers
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('dragover');
+            });
+        });
+
+        dropZone.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleDrop(e) {
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                processImage(file);
+            }
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processImage(file);
+            }
+        }
+
+        function processImage(file) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function(e) {
+                cropImage.src = e.target.result;
+                originalPreview.src = e.target.result;
+                originalSize.textContent = formatBytes(file.size);
+                previewContainer.classList.remove('hidden');
+                cropContainer.classList.remove('hidden');
+                
+                if (cropper) {
+                    cropper.destroy();
+                }
+                
+                cropper = new Cropper(cropImage, {
+                    aspectRatio: NaN,
+                    viewMode: 1,
+                    autoCropArea: 1,
+                });
+            }
+        }
+
+        cropBtn.addEventListener('click', () => {
+            if (cropper) {
+                const canvas = cropper.getCroppedCanvas();
+                originalPreview.src = canvas.toDataURL();
+                compressImage();
+                cropContainer.classList.add('hidden');
+            }
+        });
+
+        resetCropBtn.addEventListener('click', () => {
+            if (cropper) {
+                cropper.reset();
+            }
+        });
+
+        function compressImage() {
+            const formData = new FormData();
+            
+            // Convert current image to blob
+            fetch(originalPreview.src)
+                .then(res => res.blob())
+                .then(blob => {
+                    formData.append('image', blob, 'image.jpg');
+                    formData.append('quality', qualitySlider.value);
+                    
+                    // Show loading state
+                    compressBtn.disabled = true;
+                    compressBtn.innerHTML = 'Compressing...';
+                    
+                    return fetch('/image-compression/', {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        }
+                    });
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        compressedPreview.src = data.image_url + '?' + new Date().getTime(); // Prevent caching
+                        compressedSize.textContent = formatBytes(data.compressed_size);
+                        downloadBtn.classList.remove('hidden');
+                        
+                        // Remove existing stats if any
+                        const existingStats = document.querySelector('.compression-stats');
+                        if (existingStats) {
+                            existingStats.remove();
+                        }
+                        
+                        // Add compression stats
+                        const statsDiv = document.createElement('div');
+                        statsDiv.className = 'mt-4 p-4 bg-gray-50 rounded-lg compression-stats';
+                        statsDiv.innerHTML = `
+                            <p class="text-sm text-gray-600">Compression ratio: ${data.compression_ratio}%</p>
+                            <p class="text-sm text-gray-600">Quality used: ${data.quality_used}%</p>
+                            <p class="text-sm text-gray-600">Dimensions: ${data.dimensions.width}x${data.dimensions.height}</p>
+                        `;
+                        compressedPreview.parentNode.appendChild(statsDiv);
+                    } else {
+                        throw new Error(data.error || 'Compression failed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(error.message || 'Failed to compress image');
+                })
+                .finally(() => {
+                    compressBtn.disabled = false;
+                    compressBtn.innerHTML = 'Compress Image';
+                });
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        compressBtn.addEventListener('click', compressImage);
+        qualitySlider.addEventListener('change', compressImage);
+
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'compressed-image.jpg';
+            link.href = compressedPreview.src;
+            link.click();
+        });
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>

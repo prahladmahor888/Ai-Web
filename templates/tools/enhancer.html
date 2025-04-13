@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Enhancer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .effect-btn {
+            padding: 12px 20px;
+            margin: 5px;
+            border-radius: 20px;
+            background: linear-gradient(145deg, #f0f0f0, #ffffff);
+            border: 1px solid #ddd;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .effect-btn:hover {
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .effect-btn i {
+            margin-right: 8px;
+            font-size: 0.9em;
+        }
+        .slider-control {
+            appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: #ddd;
+            transition: all 0.2s ease;
+        }
+        .slider-control::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .slider-control::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        .preview-container {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            height: 250px;  /* Reduced from default */
+            max-width: 600px;  /* Added max-width */
+            margin: 10px auto;
+        }
+        .preview-container img {
+            max-width: 100%;
+            max-height: 250px;  /* Match container height */
+            object-fit: contain;
+        }
+        .preview-container.drag-over {
+            background: rgba(76,175,80,0.1);
+            border-color: #4CAF50;
+        }
+        .file-input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .preview-message {
+            text-align: center;
+            padding: 20px;
+        }
+        .preview-error {
+            color: #dc3545;
+            display: none;
+            margin-top: 10px;
+        }
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .tools-container {
+            animation: slideIn 0.5s ease;
+        }
+        .auto-correct-btn {
+            background: linear-gradient(145deg, #4CAF50, #45a049);
+            transform-origin: center;
+            transition: all 0.3s ease;
+        }
+        .auto-correct-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(76,175,80,0.3);
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideIn {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .tooltip {
+            position: relative;
+        }
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 5px 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+        .compression-control {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 5px 10px;
+            border-radius: 20px;
+            z-index: 100;
+        }
+        .compression-label {
+            font-size: 0.8em;
+            color: #666;
+            margin-right: 10px;
+        }
+        .image-compare-container {
+            position: relative;
+            max-width: 600px;
+            height: 250px;
+            margin: 0 auto;
+            overflow: hidden;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .image-compare {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .image-before,
+        .image-after {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .image-before::before,
+        .image-after::before {
+            content: 'Before';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .image-after::before {
+            content: 'After';
+            left: auto;
+            right: 10px;
+        }
+        .comparison-slider {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 4px;
+            height: 100%;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            cursor: ew-resize;
+        }
+        .comparison-slider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        .comparison-slider::after {
+            content: '⇄';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 16px;
+        }
+        .download-buttons {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 100;
+        }
+        .download-btn {
+            padding: 5px 10px;
+            background: rgba(255,255,255,0.9);
+            border: none;
+            border-radius: 20px;
+            margin-right: 10px;
+            font-size: 0.8em;
+            color: #4CAF50;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .download-btn:hover {
+            background: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <h1 class="text-center mb-4">AI Image Enhancer</h1>
+        
+        <div class="row">
+            <!-- Image Preview Section -->
+            <div class="col-lg-8">
+                <div class="preview-container bg-white">
+                    <input type="file" class="file-input" id="imageInput" accept="image/*">
+                    <div id="imagePreview">
+                        <p class="text-muted preview-message">
+                            <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i><br>
+                            Drop your image here or click to upload
+                        </p>
+                    </div>
+                    <div class="image-compare-container" style="display: none;">
+                        <div class="image-compare">
+                            <div class="image-before"></div>
+                            <div class="image-after"></div>
+                            <div class="comparison-slider"></div>
+                        </div>
+                    </div>
+                    <div class="compression-control">
+                        <label class="compression-label">Quality:</label>
+                        <select id="compressionLevel" class="form-select form-select-sm" style="width: 80px; display: inline-block;">
+                            <option value="1">High</option>
+                            <option value="0.8" selected>Medium</option>
+                            <option value="0.6">Low</option>
+                        </select>
+                    </div>
+                    <div class="download-buttons" style="display: none;">
+                        <button class="download-btn" id="downloadOriginal">
+                            <i class="fas fa-download"></i> Original
+                        </button>
+                        <button class="download-btn" id="downloadEnhanced">
+                            <i class="fas fa-download"></i> Enhanced
+                        </button>
+                    </div>
+                    <p class="preview-error" id="errorMessage">Invalid file type. Please select an image.</p>
+                    <div class="loading-overlay">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+                
+                <!-- Basic Adjustments -->
+                <div class="bg-white p-3 rounded mt-3">
+                    <h5>Basic Adjustments</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label>Brightness</label>
+                            <input type="range" class="slider-control" min="-100" max="100" value="0" id="brightness">
+                        </div>
+                        <div class="col-md-4">
+                            <label>Contrast</label>
+                            <input type="range" class="slider-control" min="-100" max="100" value="0" id="contrast">
+                        </div>
+                        <div class="col-md-4">
+                            <label>Saturation</label>
+                            <input type="range" class="slider-control" min="-100" max="100" value="0" id="saturation">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto Color Correction -->
+                <div class="bg-white p-3 rounded mt-3">
+                    <h5>Color Correction</h5>
+                    <button class="auto-correct-btn" id="autoCorrectBtn">
+                        <i class="fas fa-magic"></i> Auto Color Correct
+                    </button>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="color-label">
+                                <label>Red Balance</label>
+                                <span class="color-value">0</span>
+                            </div>
+                            <input type="range" class="color-slider" min="-100" max="100" value="0" id="redBalance">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="color-label">
+                                <label>Green Balance</label>
+                                <span class="color-value">0</span>
+                            </div>
+                            <input type="range" class="color-slider" min="-100" max="100" value="0" id="greenBalance">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="color-label">
+                                <label>Blue Balance</label>
+                                <span class="color-value">0</span>
+                            </div>
+                            <input type="range" class="color-slider" min="-100" max="100" value="0" id="blueBalance">
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="color-label">
+                                <label>Color Temperature</label>
+                                <span class="color-value">0</span>
+                            </div>
+                            <input type="range" class="color-slider" min="-100" max="100" value="0" id="colorTemp">
+                        </div>
+                        <div class="col-md-6">
+                            <div class="color-label">
+                                <label>Tint</label>
+                                <span class="color-value">0</span>
+                            </div>
+                            <input type="range" class="color-slider" min="-100" max="100" value="0" id="tint">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tools Section -->
+            <div class="col-lg-4">
+                <div class="tools-container bg-white rounded">
+                    <h5>Enhancement Effects</h5>
+                    <div class="effects-grid">
+                        <button class="effect-btn tooltip" data-effect="hdr" data-tooltip="Add HDR Effect"><i class="fas fa-sun"></i>HDR Effect</button>
+                        <button class="effect-btn tooltip" data-effect="portrait" data-tooltip="Enhance Portrait"><i class="fas fa-portrait"></i>Portrait Mode</button>
+                        <button class="effect-btn tooltip" data-effect="night" data-tooltip="Night Enhancement"><i class="fas fa-moon"></i>Night Mode</button>
+                        <button class="effect-btn" data-effect="vintage">Vintage</button>
+                        <button class="effect-btn" data-effect="bw">Black & White</button>
+                        <button class="effect-btn" data-effect="sepia">Sepia</button>
+                        <button class="effect-btn" data-effect="vivid">Vivid Colors</button>
+                        <button class="effect-btn" data-effect="soft">Soft Glow</button>
+                        <button class="effect-btn" data-effect="sharp">Sharp Detail</button>
+                        <button class="effect-btn" data-effect="noise">Noise Reduction</button>
+                        <button class="effect-btn" data-effect="color">Color Balance</button>
+                        <button class="effect-btn" data-effect="film">Film Grain</button>
+                        <button class="effect-btn" data-effect="dramatic">Dramatic</button>
+                        <button class="effect-btn" data-effect="cool">Cool Tone</button>
+                        <button class="effect-btn" data-effect="warm">Warm Tone</button>
+                        <button class="effect-btn" data-effect="clarity">Clarity Boost</button>
+                        <button class="effect-btn" data-effect="shadow">Shadow Lift</button>
+                        <button class="effect-btn" data-effect="highlight">Highlight Recovery</button>
+                        <button class="effect-btn" data-effect="dehaze">Dehaze</button>
+                        <button class="effect-btn" data-effect="vignette">Vignette</button>
+                        <button class="effect-btn" data-effect="cinematic"><i class="fas fa-film"></i>Cinematic</button>
+                        <button class="effect-btn" data-effect="polaroid"><i class="fas fa-camera"></i>Polaroid</button>
+                        <button class="effect-btn" data-effect="sunset"><i class="fas fa-sun"></i>Sunset</button>
+                        <button class="effect-btn" data-effect="moonlight"><i class="fas fa-moon"></i>Moonlight</button>
+                        <button class="effect-btn" data-effect="cyberpunk"><i class="fas fa-robot"></i>Cyberpunk</button>
+                        <button class="effect-btn" data-effect="pastels"><i class="fas fa-paint-brush"></i>Pastels</button>
+                        <button class="effect-btn" data-effect="infrared"><i class="fas fa-temperature-high"></i>Infrared</button>
+                        <button class="effect-btn" data-effect="cross_process"><i class="fas fa-random"></i>Cross Process</button>
+                        <button class="effect-btn" data-effect="lomo"><i class="fas fa-camera-retro"></i>Lomo</button>
+                    </div>
+
+                    <div class="mt-4">
+                        <button class="btn btn-primary w-100 mb-2">Apply Changes</button>
+                        <button class="btn btn-outline-secondary w-100">Reset All</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-code.js"></script>
+    <script>
+        // Update color values display
+        document.querySelectorAll('.color-slider').forEach(slider => {
+            slider.addEventListener('input', function() {
+                this.parentElement.querySelector('.color-value').textContent = this.value;
+            });
+        });
+
+        // Auto color correction button functionality
+        document.getElementById('autoCorrectBtn').addEventListener('click', function() {
+            showLoading();
+            setTimeout(() => {
+                document.getElementById('redBalance').value = "0";
+                document.getElementById('greenBalance').value = "0";
+                document.getElementById('blueBalance').value = "0";
+                document.getElementById('colorTemp').value = "0";
+                document.getElementById('tint').value = "0";
+                
+                // Update all value displays
+                document.querySelectorAll('.color-slider').forEach(slider => {
+                    slider.parentElement.querySelector('.color-value').textContent = slider.value;
+                });
+                hideLoading();
+            }, 1500);
+        });
+
+        // Add loading animation
+        function showLoading() {
+            document.querySelector('.loading-overlay').style.display = 'flex';
+        }
+        
+        function hideLoading() {
+            document.querySelector('.loading-overlay').style.display = 'none';
+        }
+        
+        // Add click animation to buttons
+        document.querySelectorAll('.effect-btn').forEach(btn => {
+            btn.addEventListener('mousedown', function() {
+                this.style.transform = 'scale(0.95)';
+            });
+            btn.addEventListener('mouseup', function() {
+                this.style.transform = '';
+            });
+        });
+
+        // Image handling functionality
+        const previewContainer = document.querySelector('.preview-container');
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // File input change handler
+        imageInput.addEventListener('change', handleFileSelect);
+
+        // Drag and drop handlers
+        previewContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            previewContainer.classList.add('drag-over');
+        });
+
+        previewContainer.addEventListener('dragleave', () => {
+            previewContainer.classList.remove('drag-over');
+        });
+
+        previewContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            previewContainer.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            const file = files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    showLoading();
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const quality = parseFloat(document.getElementById('compressionLevel').value);
+                        
+                        // Reduced max size from 1200px to 800px
+                        let width = img.width;
+                        let height = img.height;
+                        const maxSize = 800;
+                        
+                        if (width > maxSize || height > maxSize) {
+                            if (width > height) {
+                                height = (height / width) * maxSize;
+                                width = maxSize;
+                            } else {
+                                width = (width / height) * maxSize;
+                                height = maxSize;
+                            }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        const compressedImage = new Image();
+                        compressedImage.onload = function() {
+                            imagePreview.innerHTML = '';
+                            imagePreview.appendChild(compressedImage);
+                            hideLoading();
+                            errorMessage.style.display = 'none';
+                        };
+                        compressedImage.src = canvas.toDataURL('image/jpeg', quality);
+                    };
+                    img.src = e.target.result;
+                };
+                
+                reader.readAsDataURL(file);
+                document.querySelector('.image-compare-container').style.display = 'none';
+                document.getElementById('imagePreview').style.display = 'block';
+                document.querySelector('.download-buttons').style.display = 'block';
+                document.getElementById('downloadOriginal').onclick = () => {
+                    downloadImage(compressedImage.src, 'original.jpg');
+                };
+            } else {
+                errorMessage.style.display = 'block';
+                imagePreview.innerHTML = `
+                    <p class="text-muted preview-message">
+                        <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i><br>
+                        Drop your image here or click to upload
+                    </p>
+                `;
+            }
+        }
+
+        // Add compression level change handler
+        document.getElementById('compressionLevel').addEventListener('change', function() {
+            const img = imagePreview.querySelector('img');
+            if (img) {
+                handleFiles([dataURLtoFile(img.src, 'image.jpg')]);
+            }
+        });
+
+        // Helper function to convert Data URL to File object
+        function dataURLtoFile(dataurl, filename) {
+            let arr = dataurl.split(','),
+                mime = arr[0].match(/:(.*?);/)[1],
+                bstr = atob(arr[1]),
+                n = bstr.length,
+                u8arr = new Uint8Array(n);
+            while(n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new File([u8arr], filename, {type:mime});
+        }
+
+        // Reset preview when clicking Reset All button
+        document.querySelector('.btn-outline-secondary').addEventListener('click', function() {
+            imagePreview.innerHTML = `
+                <p class="text-muted preview-message">
+                    <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i><br>
+                    Drop your image here or click to upload
+                </p>
+            `;
+            errorMessage.style.display = 'none';
+        });
+
+        // Add apply changes functionality
+        document.querySelector('.btn-primary').addEventListener('click', applyChanges);
+
+        // Add effect button click handler with visual feedback
+        document.querySelectorAll('.effect-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('.effect-btn').forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // Apply effect immediately if image is loaded
+                const img = imagePreview.querySelector('img');
+                if (img) {
+                    applyChanges();
+                }
+            });
+        });
+
+        // Update applyChanges function
+        function applyChanges() {
+            const img = imagePreview.querySelector('img');
+            if (!img) {
+                alert('Please upload an image first');
+                return;
+            }
+
+            showLoading();
+
+            // Create form data
+            const formData = new FormData();
+            
+            // Add the image
+            const imageFile = dataURLtoFile(img.src, 'image.jpg');
+            formData.append('image', imageFile);
+
+            // Add adjustments
+            formData.append('brightness', document.getElementById('brightness').value);
+            formData.append('contrast', document.getElementById('contrast').value);
+            formData.append('saturation', document.getElementById('saturation').value);
+            formData.append('redBalance', document.getElementById('redBalance').value);
+            formData.append('greenBalance', document.getElementById('greenBalance').value);
+            formData.append('blueBalance', document.getElementById('blueBalance').value);
+            formData.append('colorTemp', document.getElementById('colorTemp').value);
+            formData.append('tint', document.getElementById('tint').value);
+
+            // Add selected effect
+            const selectedEffect = document.querySelector('.effect-btn.active');
+            if (selectedEffect) {
+                formData.append('effect', selectedEffect.getAttribute('data-effect'));
+            }
+
+            // Send AJAX request
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const originalImg = imagePreview.querySelector('img');
+                    const originalSrc = originalImg.src;
+                    
+                    const newImg = new Image();
+                    newImg.onload = function() {
+                        initComparison(originalSrc, data.image_url + '?t=' + new Date().getTime());
+                        hideLoading();
+                    };
+                    newImg.onerror = function() {
+                        alert('Failed to load enhanced image');
+                        hideLoading();
+                    };
+                    newImg.src = data.image_url + '?t=' + new Date().getTime();
+                    document.getElementById('downloadEnhanced').onclick = () => {
+                        downloadImage(data.image_url, 'enhanced.jpg');
+                    };
+                } else {
+                    throw new Error(data.error || 'Failed to enhance image');
+                }
+            })
+            .catch(error => {
+                alert(error.message);
+                hideLoading();
+            });
+        }
+
+        // Reset all effects and adjustments
+        document.querySelector('.btn-outline-secondary').addEventListener('click', function() {
+            // Reset sliders
+            document.querySelectorAll('input[type="range"]').forEach(slider => {
+                slider.value = 0;
+                slider.dispatchEvent(new Event('input'));
+            });
+            
+            // Remove active effect
+            document.querySelectorAll('.effect-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Reset preview if there's an image
+            const img = imagePreview.querySelector('img');
+            if (img) {
+                applyChanges();
+            } else {
+                imagePreview.innerHTML = `
+                    <p class="text-muted preview-message">
+                        <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i><br>
+                        Drop your image here or click to upload
+                    </p>
+                `;
+            }
+            errorMessage.style.display = 'none';
+        });
+
+        // Helper function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Add image comparison functionality
+        function initComparison(originalSrc, enhancedSrc) {
+            const container = document.querySelector('.image-compare-container');
+            const before = container.querySelector('.image-before');
+            const after = container.querySelector('.image-after');
+            const slider = container.querySelector('.comparison-slider');
+            
+            // Hide preview and show comparison
+            document.getElementById('imagePreview').style.display = 'none';
+            container.style.display = 'block';
+
+            // Set background images
+            before.style.backgroundImage = `url(${originalSrc})`;
+            after.style.backgroundImage = `url(${enhancedSrc})`;
+            
+            // Reset slider position
+            slider.style.left = '50%';
+            after.style.clipPath = 'polygon(50% 0, 100% 0, 100% 100%, 50% 100%)';
+            
+            let active = false;
+            
+            function slideReady(e) {
+                e.preventDefault();
+                active = true;
+                container.classList.add('sliding');
+            }
+            
+            function slideFinish() {
+                active = false;
+                container.classList.remove('sliding');
+            }
+            
+            function slideMove(e) {
+                if (!active) return;
+                
+                const rect = container.getBoundingClientRect();
+                let x = e.type === 'touchmove' ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+                x = Math.max(0, Math.min(x, rect.width));
+                const position = (x / rect.width) * 100;
+                
+                slider.style.left = `${position}%`;
+                after.style.clipPath = `polygon(${position}% 0, 100% 0, 100% 100%, ${position}% 100%)`;
+            }
+            
+            // Clear previous event listeners
+            slider.removeEventListener('mousedown', slideReady);
+            slider.removeEventListener('touchstart', slideReady);
+            window.removeEventListener('mouseup', slideFinish);
+            window.removeEventListener('touchend', slideFinish);
+            container.removeEventListener('mousemove', slideMove);
+            container.removeEventListener('touchmove', slideMove);
+            
+            // Add event listeners
+            slider.addEventListener('mousedown', slideReady);
+            slider.addEventListener('touchstart', slideReady);
+            window.addEventListener('mouseup', slideFinish);
+            window.addEventListener('touchend', slideFinish);
+            container.addEventListener('mousemove', slideMove);
+            container.addEventListener('touchmove', slideMove);
+        }
+
+        // Add download functionality
+        function downloadImage(url, filename) {
+            fetch(url)
+                .then(response => response.blob())
+                .then(blob => {
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                    window.URL.revokeObjectURL(link.href);
+                })
+                .catch(error => {
+                    alert('Failed to download image');
+                    console.error('Download error:', error);
+                });
+        }
+    </script>
+</body>
+</html>

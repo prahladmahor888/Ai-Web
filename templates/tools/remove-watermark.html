@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remove Watermark - AI Tools</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .drop-zone {
+            transition: all 0.3s ease;
+        }
+        .drop-zone.dragover {
+            transform: scale(1.02);
+            background-color: #f0f9ff;
+        }
+        .preview-image {
+            transition: transform 0.3s ease;
+            max-height: 400px; /* Add max height */
+            width: auto;
+            object-fit: contain;
+            margin: 0 auto;
+        }
+        .preview-image:hover {
+            transform: scale(1.05);
+        }
+        .selection-area {
+            position: absolute;
+            border: 2px dashed #2563eb;
+            background: rgba(37, 99, 235, 0.1);
+            cursor: move;
+            animation: pulse 2s infinite;
+            user-select: none;
+        }
+        
+        .selection-handle {
+            width: 12px;
+            height: 12px;
+            background: #2563eb;
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid white;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+        }
+
+        .guide-line {
+            position: absolute;
+            background: rgba(37, 99, 235, 0.2);
+            pointer-events: none;
+        }
+        
+        .processing {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    {% csrf_token %}
+    <script>
+        // Get CSRF token
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">
+            <i class="fas fa-stamp"></i> Remove Watermark
+        </h1>
+
+        <!-- Add Tool Information -->
+        <div class="max-w-2xl mx-auto mb-8">
+            <div class="bg-white rounded-lg p-6 shadow-md mb-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">About This Tool</h2>
+                <p class="text-gray-600 mb-4">
+                    Our advanced AI-powered watermark removal tool utilizes state-of-the-art machine learning algorithms to seamlessly remove watermarks while maintaining image integrity. Perfect for photographers, designers, and content creators who need to restore images to their original state.
+                </p>
+                
+                <h3 class="font-semibold text-gray-700 mb-2">Key Features:</h3>
+                <ul class="list-disc list-inside text-gray-600 mb-4 space-y-2">
+                    <li>AI-powered smart watermark detection and removal</li>
+                    <li>Advanced content-aware fill technology</li>
+                    <li>Support for both text and image watermarks</li>
+                    <li>Batch processing capability (Pro version)</li>
+                    <li>Multiple watermark removal in single image</li>
+                    <li>Real-time preview of results</li>
+                    <li>Automatic background reconstruction</li>
+                </ul>
+
+                <h3 class="font-semibold text-gray-700 mb-2">Supported Formats:</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div class="bg-gray-50 p-3 rounded text-center">
+                        <i class="fas fa-file-image text-blue-500"></i>
+                        <p class="text-sm text-gray-600">JPG/JPEG</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded text-center">
+                        <i class="fas fa-file-image text-green-500"></i>
+                        <p class="text-sm text-gray-600">PNG</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded text-center">
+                        <i class="fas fa-file-image text-purple-500"></i>
+                        <p class="text-sm text-gray-600">WebP</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded text-center">
+                        <i class="fas fa-file-image text-orange-500"></i>
+                        <p class="text-sm text-gray-600">TIFF</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+                <h3 class="font-semibold text-blue-700 mb-2">How to Use:</h3>
+                <ol class="list-decimal list-inside text-gray-600">
+                    <li>Upload your image using drag & drop or file selection</li>
+                    <li>Click "Select Watermark Area" and drag to select the watermark</li>
+                    <li>Adjust the selection area using the corner handles</li>
+                    <li>Click "Remove Watermark" to process the image</li>
+                </ol>
+            </div>
+
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4">
+                <h3 class="font-semibold text-yellow-700 mb-2">Pro Tips:</h3>
+                <ul class="list-disc list-inside text-gray-600">
+                    <li>Select the watermark area as precisely as possible</li>
+                    <li>For better results, avoid selecting non-watermark areas</li>
+                    <li>If the watermark is partially transparent, multiple passes might be needed</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Existing Tool Interface -->
+        <div class="max-w-2xl mx-auto">
+            <div id="drop-zone" class="drop-zone border-4 border-dashed border-gray-300 rounded-lg p-8 text-center mb-6 bg-white cursor-pointer hover:border-blue-500">
+                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600">Drag and drop your image here or</p>
+                <label class="mt-4 inline-block px-6 py-2.5 bg-blue-600 text-white font-medium text-xs leading-tight uppercase rounded shadow-md hover:bg-blue-700 hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150 ease-in-out cursor-pointer">
+                    Choose File
+                    <input type="file" class="hidden" accept="image/*" id="file-input">
+                </label>
+            </div>
+
+            <div id="preview-section" class="hidden">
+                <div class="bg-white rounded-lg p-6 shadow-md">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Preview</h2>
+                    <div class="relative max-w-lg mx-auto overflow-hidden" id="image-container">
+                        <img id="preview-image" src="" alt="Preview" class="preview-image w-full rounded-lg shadow-sm">
+                        <div id="selection-area" class="selection-area hidden">
+                            <div class="selection-handle top-0 left-0" data-handle="tl"></div>
+                            <div class="selection-handle top-0 right-0" data-handle="tr"></div>
+                            <div class="selection-handle bottom-0 left-0" data-handle="bl"></div>
+                            <div class="selection-handle bottom-0 right-0" data-handle="br"></div>
+                        </div>
+                        <div id="result-image" class="hidden">
+                            <img id="processed-image" src="" alt="Processed" class="w-full rounded-lg shadow-sm">
+                        </div>
+                    </div>
+                    <div class="mt-4 flex space-x-4">
+                        <button id="auto-detect" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-magic mr-2"></i>Auto Detect
+                        </button>
+                        <button id="select-watermark" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-crop-alt mr-2"></i>Manual Select
+                        </button>
+                        <button id="remove-image" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
+                            <i class="fas fa-times mr-2"></i>Remove
+                        </button>
+                    </div>
+                    <button id="remove-watermark" class="mt-4 w-full bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fas fa-magic mr-2"></i><span>Remove Watermark</span>
+                    </button>
+                    <button id="download-image" class="mt-4 w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors hidden">
+                        <i class="fas fa-download mr-2"></i>Download Image
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add FAQ Section -->
+        <div class="bg-white rounded-lg p-6 shadow-md mt-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">Frequently Asked Questions</h2>
+            
+            <div class="space-y-4">
+                <div class="border-b pb-4">
+                    <h3 class="font-medium text-gray-800 mb-2">How does the AI watermark removal work?</h3>
+                    <p class="text-gray-600">Our AI analyzes the selected area to identify the watermark pattern and uses advanced algorithms to reconstruct the original image content underneath.</p>
+                </div>
+                
+                <div class="border-b pb-4">
+                    <h3 class="font-medium text-gray-800 mb-2">Is there a file size limit?</h3>
+                    <p class="text-gray-600">Free version supports up to 10MB per image. Pro version allows up to 50MB per image.</p>
+                </div>
+                
+                <div class="border-b pb-4">
+                    <h3 class="font-medium text-gray-800 mb-2">What types of watermarks can be removed?</h3>
+                    <p class="text-gray-600">Our tool can remove text watermarks, logo watermarks, and transparent overlays. Complex or very large watermarks may require multiple passes.</p>
+                </div>
+                
+                <div class="pb-4">
+                    <h3 class="font-medium text-gray-800 mb-2">How accurate is the removal process?</h3>
+                    <p class="text-gray-600">Accuracy depends on the watermark complexity and background. Simple watermarks on uniform backgrounds have near-perfect removal, while complex cases achieve 85-95% accuracy.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 shadow-md mt-8 text-white">
+            <h2 class="text-xl font-semibold mb-4">Pro Version Features</h2>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="flex items-start space-x-3">
+                    <i class="fas fa-check-circle mt-1"></i>
+                    <span>Batch processing up to 100 images</span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <i class="fas fa-check-circle mt-1"></i>
+                    <span>Priority processing</span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <i class="fas fa-check-circle mt-1"></i>
+                    <span>Advanced AI enhancement</span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <i class="fas fa-check-circle mt-1"></i>
+                    <span>No file size limits</span>
+                </div>
+            </div>
+            <button class="mt-6 bg-white text-blue-600 px-6 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors">
+                Upgrade to Pro
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const previewSection = document.getElementById('preview-section');
+        const previewImage = document.getElementById('preview-image');
+        const removeImageBtn = document.getElementById('remove-image');
+        const selectWatermarkBtn = document.getElementById('select-watermark');
+        const selectionArea = document.getElementById('selection-area');
+        const imageContainer = document.getElementById('image-container');
+        const removeWatermarkBtn = document.getElementById('remove-watermark');
+        const autoDetectBtn = document.getElementById('auto-detect');
+        
+        let isSelecting = false;
+        let selectedArea = { x: 0, y: 0, width: 0, height: 0 };
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropZone.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('dragover');
+        }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', handleFileSelect, false);
+        removeImageBtn.addEventListener('click', removeImage, false);
+        selectWatermarkBtn.addEventListener('click', toggleSelection);
+        autoDetectBtn.addEventListener('click', async function() {
+            const btn = this;
+            const icon = btn.querySelector('i');
+            
+            btn.disabled = true;
+            icon.classList.add('processing');
+            
+            try {
+                const img = document.getElementById('preview-image');
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                const blob = await new Promise(resolve => {
+                    canvas.toBlob(resolve, 'image/png');
+                });
+                
+                const formData = new FormData();
+                formData.append('image', blob);
+                formData.append('action', 'detect');
+
+                const response = await fetch('{% url "image_ai:remove_watermark" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                    },
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+
+                const data = await response.json();
+                
+                if (data.success && data.watermark) {
+                    const rect = img.getBoundingClientRect();
+                    const scale = rect.width / img.naturalWidth;
+                    
+                    selectedArea = {
+                        x: data.watermark.x * scale,
+                        y: data.watermark.y * scale,
+                        width: data.watermark.width * scale,
+                        height: data.watermark.height * scale,
+                        scale: img.naturalWidth / rect.width
+                    };
+                    
+                    selectionArea.classList.remove('hidden');
+                    updateSelectionArea();
+                    
+                    // Automatically trigger watermark removal
+                    removeWatermarkBtn.click();
+                } else {
+                    throw new Error(data.error || 'No watermark detected');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert(error.message || 'Failed to detect watermark');
+            } finally {
+                btn.disabled = false;
+                icon.classList.remove('processing');
+            }
+        });
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            const file = files[0];
+            if (!file) return;
+
+            // Validate file size (max 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File size too large. Maximum size is 10MB');
+                return;
+            }
+
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/tiff'];
+            if (!validTypes.includes(file.type)) {
+                alert('Unsupported file type. Please use JPG, PNG, WebP, or TIFF');
+                return;
+            }
+
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    previewImage.src = img.src;
+                    previewSection.classList.remove('hidden');
+                    dropZone.classList.add('hidden');
+                    
+                    // Trigger auto-detection after image is fully loaded
+                    setTimeout(async () => {
+                        try {
+                            await detectWatermark(img);
+                        } catch (error) {
+                            console.error('Auto-detection failed:', error);
+                            selectWatermarkBtn.click();
+                        }
+                    }, 100);
+                };
+                img.src = e.target.result;
+            };
+            
+            reader.onerror = function() {
+                alert('Error reading file');
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        async function detectWatermark(img) {
+            autoDetectBtn.disabled = true;
+            autoDetectBtn.querySelector('i').classList.add('processing');
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            
+            const blob = await new Promise(resolve => {
+                canvas.toBlob(resolve, 'image/png');
+            });
+            
+            const formData = new FormData();
+            formData.append('image', blob);
+            formData.append('action', 'detect');
+
+            const response = await fetch('{% url "image_ai:remove_watermark" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                },
+                body: formData,
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                throw new Error('Detection failed');
+            }
+
+            const data = await response.json();
+            
+            if (data.success && data.watermark) {
+                const rect = img.getBoundingClientRect();
+                const displayScale = previewImage.width / img.naturalWidth;
+                
+                selectedArea = {
+                    x: Math.round(data.watermark.x * displayScale),
+                    y: Math.round(data.watermark.y * displayScale),
+                    width: Math.round(data.watermark.width * displayScale),
+                    height: Math.round(data.watermark.height * displayScale),
+                    scale: img.naturalWidth / previewImage.width
+                };
+                
+                selectionArea.classList.remove('hidden');
+                updateSelectionArea();
+                
+                // Automatically start watermark removal
+                await new Promise(resolve => setTimeout(resolve, 100));
+                removeWatermarkBtn.click();
+            } else {
+                throw new Error(data.error || 'No watermark detected');
+            }
+            
+            autoDetectBtn.disabled = false;
+            autoDetectBtn.querySelector('i').classList.remove('processing');
+        }
+
+        function removeImage() {
+            previewImage.src = '';
+            previewSection.classList.add('hidden');
+            dropZone.classList.remove('hidden');
+            fileInput.value = '';
+        }
+
+        function toggleSelection() {
+            isSelecting = !isSelecting;
+            if (isSelecting) {
+                selectionArea.classList.remove('hidden');
+                selectWatermarkBtn.classList.add('bg-yellow-600');
+                selectWatermarkBtn.classList.remove('bg-blue-600');
+                initializeSelection();
+            } else {
+                selectionArea.classList.add('hidden');
+                selectWatermarkBtn.classList.remove('bg-yellow-600');
+                selectWatermarkBtn.classList.add('bg-blue-600');
+            }
+        }
+        
+        function initializeSelection() {
+            const img = document.getElementById('preview-image');
+            const rect = img.getBoundingClientRect();
+            const scale = img.naturalWidth / rect.width;
+            
+            selectedArea = {
+                x: Math.round(rect.width * 0.2),
+                y: Math.round(rect.height * 0.2),
+                width: Math.round(rect.width * 0.6),
+                height: Math.round(rect.height * 0.6),
+                scale: scale
+            };
+            
+            updateSelectionArea();
+        }
+        
+        function updateSelectionArea() {
+            selectionArea.style.left = `${selectedArea.x}px`;
+            selectionArea.style.top = `${selectedArea.y}px`;
+            selectionArea.style.width = `${selectedArea.width}px`;
+            selectionArea.style.height = `${selectedArea.height}px`;
+        }
+        
+        let isDragging = false;
+        let currentHandle = null;
+        let startPos = { x: 0, y: 0 };
+        
+        selectionArea.addEventListener('mousedown', startDragging);
+        document.addEventListener('mousemove', handleDrag);
+        document.addEventListener('mouseup', stopDragging);
+        
+        function startDragging(e) {
+            if (!isSelecting) return;
+            isDragging = true;
+            currentHandle = e.target.dataset.handle;
+            startPos = { x: e.clientX, y: e.clientY };
+        }
+        
+        function updateSelectedArea(dx, dy) {
+            const img = document.getElementById('preview-image');
+            const rect = img.getBoundingClientRect();
+
+            if (currentHandle === 'tl') {
+                selectedArea.width -= dx;
+                selectedArea.height -= dy;
+                selectedArea.x += dx;
+                selectedArea.y += dy;
+            } else if (currentHandle === 'tr') {
+                selectedArea.width += dx;
+                selectedArea.height -= dy;
+                selectedArea.y += dy;
+            } else if (currentHandle === 'bl') {
+                selectedArea.width -= dx;
+                selectedArea.height += dy;
+                selectedArea.x += dx;
+            } else if (currentHandle === 'br') {
+                selectedArea.width += dx;
+                selectedArea.height += dy;
+            }
+
+            // Enforce minimum size
+            const minSize = 20;
+            if (selectedArea.width < minSize) {
+                selectedArea.width = minSize;
+                selectedArea.x = currentHandle.includes('l') ? rect.width - minSize : selectedArea.x;
+            }
+            if (selectedArea.height < minSize) {
+                selectedArea.height = minSize;
+                selectedArea.y = currentHandle.includes('t') ? rect.height - minSize : selectedArea.y;
+            }
+
+            // Keep selection within image bounds
+            selectedArea.x = Math.max(0, Math.min(selectedArea.x, rect.width - selectedArea.width));
+            selectedArea.y = Math.max(0, Math.min(selectedArea.y, rect.height - selectedArea.height));
+            selectedArea.width = Math.min(selectedArea.width, rect.width - selectedArea.x);
+            selectedArea.height = Math.min(selectedArea.height, rect.height - selectedArea.y);
+        }
+        
+        function handleDrag(e) {
+            if (!isDragging) return;
+            
+            const img = document.getElementById('preview-image');
+            const rect = img.getBoundingClientRect();
+            const container = document.getElementById('image-container');
+            const containerRect = container.getBoundingClientRect();
+
+            // Calculate relative mouse position within the image
+            const x = e.clientX - containerRect.left;
+            const y = e.clientY - containerRect.top;
+            
+            const dx = e.clientX - startPos.x;
+            const dy = e.clientY - startPos.y;
+            
+            if (currentHandle) {
+                updateSelectedArea(dx, dy);
+            } else {
+                // Move entire selection
+                selectedArea.x = Math.max(0, Math.min(selectedArea.x + dx, rect.width - selectedArea.width));
+                selectedArea.y = Math.max(0, Math.min(selectedArea.y + dy, rect.height - selectedArea.height));
+            }
+            
+            startPos = { x: e.clientX, y: e.clientY };
+            updateSelectionArea();
+        }
+        
+        function stopDragging() {
+            isDragging = false;
+            currentHandle = null;
+        }
+        
+        // Add touch support
+        selectionArea.addEventListener('touchstart', handleTouchStart, false);
+        document.addEventListener('touchmove', handleTouchMove, false);
+        document.addEventListener('touchend', stopDragging, false);
+
+        function handleTouchStart(e) {
+            const touch = e.touches[0];
+            startDragging({
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                target: e.target
+            });
+        }
+
+        function handleTouchMove(e) {
+            if (!isDragging) return;
+            const touch = e.touches[0];
+            handleDrag({
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                preventDefault: () => e.preventDefault()
+            });
+        }
+        
+        removeWatermarkBtn.addEventListener('click', async function() {
+            if (!isSelecting || selectionArea.classList.contains('hidden')) {
+                alert('Please select the watermark area first');
+                return;
+            }
+            
+            const btn = this;
+            const icon = btn.querySelector('i');
+            const span = btn.querySelector('span');
+            
+            btn.disabled = true;
+            icon.classList.add('processing');
+            span.textContent = 'Processing...';
+            
+            try {
+                const formData = new FormData();
+                const img = document.getElementById('preview-image');
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                const blob = await new Promise(resolve => {
+                    canvas.toBlob(resolve, 'image/png');
+                });
+                
+                formData.append('image', blob);
+                formData.append('mask', JSON.stringify({
+                    x: selectedArea.x,
+                    y: selectedArea.y,
+                    width: selectedArea.width,
+                    height: selectedArea.height
+                }));
+                formData.append('scale_factor', selectedArea.scale);
+
+                const response = await fetch('{% url "image_ai:remove_watermark" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                    },
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new TypeError("Response was not JSON");
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    const resultImage = document.getElementById('result-image');
+                    const processedImage = document.getElementById('processed-image');
+                    processedImage.src = data.image_url;
+                    resultImage.classList.remove('hidden');
+                    document.getElementById('selection-area').classList.add('hidden');
+                    document.getElementById('download-image').classList.remove('hidden');
+                    document.getElementById('download-image').setAttribute('data-filename', data.filename);
+                } else {
+                    throw new Error(data.error || 'Failed to process image');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert(error.message || 'An error occurred while processing the image');
+            } finally {
+                btn.disabled = false;
+                icon.classList.remove('processing');
+                span.textContent = 'Remove Watermark';
+            }
+        });
+
+        document.getElementById('download-image').addEventListener('click', async function() {
+            const filename = this.getAttribute('data-filename');
+            if (!filename) return;
+            
+            try {
+                const response = await fetch('{% url "image_ai:remove_watermark" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrftoken,
+                    },
+                    body: `action=download&filename=${filename}`
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                } else {
+                    throw new Error('Failed to download image');
+                }
+            } catch (error) {
+                alert(error.message || 'Failed to download image');
+            }
+        });
+    </script>
+</body>
+</html>

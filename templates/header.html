@@ -1,0 +1,54 @@
+<header class="header">
+    <div class="header-container">
+        <a href="/" class="logo" aria-label="AImagine Home">
+            <i class="fas fa-brain" aria-hidden="true"></i>
+            <span>AImagine</span>
+        </a>
+        
+        <button class="menu-toggle" aria-label="Toggle menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <nav class="nav-menu">
+            <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
+                <i class="fas fa-home"></i>Home
+            </a>
+            <a href="/generate" class="nav-link {% if request.path == '/generate' %}active{% endif %}">
+                <i class="fas fa-magic"></i> Generate
+            </a>
+            <a href="/gallery" class="nav-link {% if request.path == '/gallery' %}active{% endif %}">
+                <i class="fas fa-images"></i> Gallery
+            </a>
+            <a href="/about" class="nav-link {% if request.path == '/about' %}active{% endif %}">
+                <i class="fas fa-info-circle"></i> About
+            </a>
+        </nav>
+    </div>
+</header>
+
+<script>
+const menuToggle = document.querySelector('.menu-toggle');
+const navMenu = document.querySelector('.nav-menu');
+let isMenuOpen = false;
+
+function toggleMenu(show) {
+    isMenuOpen = show ?? !isMenuOpen;
+    menuToggle.classList.toggle('active', isMenuOpen);
+    navMenu.classList.toggle('active', isMenuOpen);
+}
+
+menuToggle.addEventListener('click', () => toggleMenu());
+
+document.addEventListener('click', (e) => {
+    if (isMenuOpen && !menuToggle.contains(e.target) && !navMenu.contains(e.target)) {
+        toggleMenu(false);
+    }
+});
+
+// Close menu on navigation
+document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', () => toggleMenu(false));
+});
+</script>

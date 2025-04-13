@@ -1,0 +1,613 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Restoration Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <style>
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            animation: pulse 2s infinite;
+            background: linear-gradient(145deg, #ffffff, #f5f5f5);
+        }
+        .upload-area:hover {
+            border-color: #0d6efd;
+            background-color: #f8f9fa;
+            animation: none;
+            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            transform: translateY(-2px);
+        }
+        .preview-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .preview-image:hover {
+            transform: scale(1.05);
+        }
+        .loading {
+            display: none;
+        }
+        .feature-card {
+            border-radius: 10px;
+            border: none;
+            transition: transform 0.3s;
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        .example-image {
+            max-height: 200px;
+            object-fit: cover;
+        }
+        .info-tooltip {
+            cursor: help;
+        }
+        .supported-formats {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        .process-step {
+            position: relative;
+            padding: 20px;
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        .process-step:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: -15px;
+            width: 30px;
+            height: 30px;
+            background: #0d6efd;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .faq-item {
+            border-bottom: 1px solid #eee;
+            padding: 1rem 0;
+        }
+        .btn-primary {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(13, 110, 253, 0.3);
+        }
+        /* Animation keyframes */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        /* Loading animation */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #0d6efd;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .example-wrapper {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            transition: all 0.3s ease;
+        }
+        .example-wrapper:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+        }
+        .example-card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+        .example-title {
+            font-size: 1.2rem;
+            color: #444;
+            margin: 15px 0;
+        }
+        .example-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        .compare-slider {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            cursor: col-resize;
+        }
+        .compare-slider img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .slider-before {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .slider-handle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: 3px solid #0d6efd;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: col-resize;
+            z-index: 2;
+        }
+        .slider-handle::after {
+            content: '↔';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #0d6efd;
+            font-weight: bold;
+        }
+        .slider-line {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 100%;
+            background: #0d6efd;
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Loading Overlay -->
+    <div class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div class="container py-5">
+        <!-- Enhanced Header Section -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">AI Photo Restoration Tool</h1>
+            <p class="lead text-muted mb-4">Transform your old, damaged photos into clear, enhanced images using cutting-edge AI technology</p>
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <p class="mb-4">Perfect for restoring old family photos, historical images, and precious memories. Our AI technology can fix scratches, tears, stains, and fading while preserving the authentic look of your original photos.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- How It Works Section -->
+        <div class="row mb-5">
+            <div class="col-12 text-center mb-4">
+                <h2>How It Works</h2>
+                <p class="text-muted">Three simple steps to restore your photos</p>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="process-step">
+                    <div class="step-number">1</div>
+                    <h5 class="mb-3">Upload Photo</h5>
+                    <p>Simply drag & drop or select your damaged photo. We support various formats including JPG, PNG, and TIFF.</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="process-step">
+                    <div class="step-number">2</div>
+                    <h5 class="mb-3">AI Processing</h5>
+                    <p>Our advanced AI algorithms analyze and restore your photo, fixing damages and enhancing quality.</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="process-step">
+                    <div class="step-number">3</div>
+                    <h5 class="mb-3">Download Result</h5>
+                    <p>Get your beautifully restored photo in high resolution, ready to print or share.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="row mb-5">
+            <div class="col-md-4 mb-3">
+                <div class="card feature-card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="fas fa-magic fa-2x text-primary mb-3"></i>
+                        <h5>AI-Powered Restoration</h5>
+                        <p class="text-muted">Repairs scratches, tears, and color fading automatically</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card feature-card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="fas fa-image fa-2x text-primary mb-3"></i>
+                        <h5>High Resolution</h5>
+                        <p class="text-muted">Maintains image quality up to 4K resolution</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card feature-card h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="fas fa-lock fa-2x text-primary mb-3"></i>
+                        <h5>100% Private</h5>
+                        <p class="text-muted">Your photos are processed securely and never stored</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Example Results Section -->
+        <div class="row mb-5" data-aos="fade-up">
+            <div class="col-12 text-center mb-4">
+                <h3 class="display-5 mb-3">Amazing Results</h3>
+                <p class="lead text-muted mb-5">See the transformation yourself with our advanced AI restoration</p>
+            </div>
+            
+            <div class="col-lg-8 mx-auto">
+                <div class="example-card">
+                    <div class="example-wrapper">
+                        <div class="compare-slider" id="compareSlider">
+                            <div class="slider-before">
+                                <img src="{% static 'images/before.jpg' %}" alt="Before restoration">
+                            </div>
+                            <img src="{% static 'images/after.jpg' %}" alt="After restoration">
+                            <div class="slider-handle"></div>
+                            <div class="slider-line"></div>
+                        </div>
+                    </div>
+                    <h4 class="example-title text-center">1940s Family Photo Restoration</h4>
+                    <p class="example-description text-center">
+                        This 80-year-old photograph was restored to its original glory, 
+                        removing scratches, tears, and color degradation while preserving authentic details.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <!-- Supported Formats -->
+                        <div class="supported-formats mb-4">
+                            <h6 class="mb-2"><i class="fas fa-info-circle"></i> Supported Formats</h6>
+                            <span class="badge bg-light text-dark me-2">JPG</span>
+                            <span class="badge bg-light text-dark me-2">PNG</span>
+                            <span class="badge bg-light text-dark me-2">TIFF</span>
+                            <small class="d-block mt-2 text-muted">Maximum file size: 10MB</small>
+                        </div>
+
+                        <form id="restoreForm" class="mb-4">
+                            <div class="upload-area mb-4" id="dropZone">
+                                <input type="file" id="photoInput" class="d-none" accept="image/*">
+                                <div class="mb-3">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-primary"></i>
+                                </div>
+                                <p class="mb-0">Drag and drop your photo here or click to browse</p>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h5>Original Photo</h5>
+                                    <img id="originalPreview" class="preview-image mb-2 d-none" src="#" alt="Original">
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>Restored Photo</h5>
+                                    <img id="restoredPreview" class="preview-image mb-2 d-none" src="#" alt="Restored">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100" id="restoreBtn">
+                                <span class="normal">Restore Photo</span>
+                                <span class="loading">
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    Processing...
+                                </span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div class="card mt-4 shadow-sm">
+                    <div class="card-body">
+                        <h5><i class="fas fa-lightbulb text-warning"></i> Tips for Best Results</h5>
+                        <ul class="mb-0">
+                            <li>Scan your photos at 300 DPI or higher</li>
+                            <li>Ensure the photo is well-lit and properly aligned</li>
+                            <li>For severely damaged photos, consider multiple restorations</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h3 class="text-center mb-4">Frequently Asked Questions</h3>
+                        <div class="faq-item">
+                            <h5>What types of damage can be fixed?</h5>
+                            <p>Our AI can repair scratches, tears, stains, fading, color damage, and even missing parts of the photo.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h5>How long does the restoration process take?</h5>
+                            <p>Most photos are restored within 30 seconds to 2 minutes, depending on the size and damage level.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h5>What resolution should my scan be?</h5>
+                            <p>We recommend scanning your photos at 300 DPI or higher for best results. Higher resolution scans will produce better quality restorations.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h5>Is my photo kept private?</h5>
+                            <p>Yes! Your photos are processed securely and automatically deleted after restoration. We never store or share your images.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Tips Section -->
+        <div class="row justify-content-center mt-4">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h4><i class="fas fa-lightbulb text-warning"></i> Pro Tips for Best Results</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Scanning Tips:</h6>
+                                <ul>
+                                    <li>Clean the scanner glass thoroughly</li>
+                                    <li>Place photo straight on scanner</li>
+                                    <li>Scan at 300 DPI or higher</li>
+                                    <li>Save in PNG or TIFF format</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Photo Preparation:</h6>
+                                <ul>
+                                    <li>Remove photo from frame/album</li>
+                                    <li>Carefully clean dust off photo</li>
+                                    <li>Handle photos by edges only</li>
+                                    <li>Avoid touching damaged areas</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://kit.fontawesome.com/your-code.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize AOS
+            AOS.init({
+                duration: 800,
+                offset: 100,
+                once: true
+            });
+
+            const dropZone = document.getElementById('dropZone');
+            const photoInput = document.getElementById('photoInput');
+            const originalPreview = document.getElementById('originalPreview');
+            const form = document.getElementById('restoreForm');
+            const restoreBtn = document.getElementById('restoreBtn');
+
+            dropZone.addEventListener('click', () => photoInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#0d6efd';
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.style.borderColor = '#ccc';
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#ccc';
+                const file = e.dataTransfer.files[0];
+                handleFile(file);
+            });
+
+            photoInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                handleFile(file);
+            });
+
+            function handleFile(file) {
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        originalPreview.src = e.target.result;
+                        originalPreview.classList.remove('d-none');
+                        originalPreview.style.animation = 'fadeUp 0.5s ease-out';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const file = photoInput.files[0];
+                if (!file) {
+                    alert('Please select a photo first');
+                    return;
+                }
+
+                const loadingOverlay = document.querySelector('.loading-overlay');
+                loadingOverlay.style.display = 'flex';
+                restoreBtn.disabled = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('image', file);
+
+                    const response = await fetch('/restore-photo/', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Display restored image
+                        const restoredPreview = document.getElementById('restoredPreview');
+                        restoredPreview.src = result.image_url;
+                        restoredPreview.classList.remove('d-none');
+                        restoredPreview.style.animation = 'fadeUp 0.5s ease-out';
+
+                        // Show success message
+                        const toast = document.createElement('div');
+                        toast.className = 'position-fixed bottom-0 end-0 p-3';
+                        toast.style.zIndex = '1050';
+                        toast.innerHTML = `
+                            <div class="toast show" role="alert">
+                                <div class="toast-header">
+                                    <strong class="me-auto">Success</strong>
+                                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                                </div>
+                                <div class="toast-body">
+                                    ${result.message}
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.remove(), 3000);
+                    } else {
+                        throw new Error(result.error);
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                } finally {
+                    loadingOverlay.style.display = 'none';
+                    restoreBtn.disabled = false;
+                }
+            });
+
+            // Add smooth scroll
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+
+            // Add Bootstrap tooltips initialization
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            })
+
+            // Add comparison slider functionality
+            function initCompareSlider() {
+                const slider = document.getElementById('compareSlider');
+                const before = slider.querySelector('.slider-before');
+                const handle = slider.querySelector('.slider-handle');
+                const line = slider.querySelector('.slider-line');
+                let isResizing = false;
+
+                slider.addEventListener('mousedown', startResizing);
+                document.addEventListener('mousemove', resize);
+                document.addEventListener('mouseup', stopResizing);
+                slider.addEventListener('touchstart', startResizing);
+                document.addEventListener('touchmove', resize);
+                document.addEventListener('touchend', stopResizing);
+
+                function startResizing(e) {
+                    isResizing = true;
+                    e.preventDefault();
+                }
+
+                function stopResizing() {
+                    isResizing = false;
+                }
+
+                function resize(e) {
+                    if (!isResizing) return;
+
+                    const rect = slider.getBoundingClientRect();
+                    const x = (e.type === 'mousemove') ? 
+                        e.pageX - rect.left - window.pageXOffset :
+                        e.touches[0].pageX - rect.left - window.pageXOffset;
+                    
+                    const position = Math.max(0, Math.min(x, rect.width));
+                    const percentage = (position / rect.width) * 100;
+
+                    before.style.width = `${percentage}%`;
+                    handle.style.left = `${percentage}%`;
+                    line.style.left = `${percentage}%`;
+                }
+            }
+
+            // Initialize the comparison slider
+            initCompareSlider();
+        });
+    </script>
+</body>
+</html>

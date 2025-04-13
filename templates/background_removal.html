@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Background Remover Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #6366f1;
+            --bg-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+            --card-bg: rgba(255, 255, 255, 0.98);
+        }
+
+        body {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e5e9ff 100%);
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        .app-container {
+            max-width: min(95%, 1000px);
+            margin: 1rem auto;
+            padding: clamp(0.5rem, 2vw, 1.5rem);
+        }
+
+        .tool-card {
+            background: var(--card-bg);
+            border-radius: clamp(12px, 2vw, 20px);
+            box-shadow: var(--shadow-lg);
+            padding: clamp(1rem, 2vw, 1.5rem);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(8px);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg), 0 10px 40px rgba(79, 70, 229, 0.1);
+        }
+
+        .preview-container {
+            aspect-ratio: 16/9;
+            height: auto;
+            max-height: 300px;
+            background: linear-gradient(45deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 0.5rem;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+
+        .preview-image:hover {
+            transform: scale(1.02);
+        }
+
+        .upload-area {
+            aspect-ratio: 16/9;
+            max-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            background: linear-gradient(45deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 2px dashed #cbd5e1;
+            border-radius: clamp(8px, 1.5vw, 16px);
+            padding: 1rem;
+        }
+
+        .control-panel {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .slider-control {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .slider-control label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-custom {
+            background: var(--bg-gradient);
+            color: white;
+            padding: clamp(0.5rem, 1.5vw, 0.8rem) clamp(1rem, 2vw, 1.5rem);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            border-radius: 12px;
+            border: none;
+            transform-origin: center;
+            transition: all 0.2s ease;
+        }
+
+        .btn-custom:hover {
+            transform: translateY(-1px) scale(1.01);
+            box-shadow: 0 4px 20px rgba(79, 70, 229, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .tool-card {
+                margin-bottom: 1rem;
+            }
+
+            .upload-area {
+                max-height: 150px;
+            }
+
+            .control-panel {
+                gap: 0.8rem;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .processing {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .animate-float {
+            animation: float 2s ease-in-out infinite;
+        }
+
+        .animate-spin {
+            animation: spin 2s linear infinite;
+        }
+
+        .icon-container {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: rgba(99, 102, 241, 0.1);
+            margin-right: 0.5rem;
+        }
+
+        .slider-value {
+            font-size: 0.8rem;
+            color: #666;
+            min-width: 2.5rem;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    {% csrf_token %}
+    <div class="app-container">
+        <h1 class="text-center page-title">
+            <span class="badge bg-white text-primary shadow-sm px-3 py-2">
+                <i class="fas fa-wand-magic-sparkles me-2 animate-float"></i>AI Background Remover
+            </span>
+        </h1>
+
+        <div class="row">
+            <div class="col-lg-6 mb-3">
+                <div class="tool-card h-100">
+                    <div class="upload-area mb-2" id="dropZone">
+                        <i class="fas fa-cloud-upload-alt text-primary mb-2"></i>
+                        <h6 class="mb-1">Drop image here</h6>
+                        <small class="text-muted">PNG, JPG, JPEG</small>
+                        <input type="file" id="fileInput" class="d-none" accept="image/*">
+                    </div>
+                    <div class="preview-container d-none" id="previewContainer">
+                        <img id="previewImage" class="preview-image" src="" alt="Preview">
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6 mb-3">
+                <div class="tool-card h-100">
+                    <div class="control-panel">
+                        <h6 class="mb-2">
+                            <span class="icon-container">
+                                <i class="fas fa-sliders text-primary animate-float"></i>
+                            </span>
+                            Edit Options
+                        </h6>
+                        
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Background Type</label>
+                            <select class="form-select form-select-sm" id="bgType">
+                                <option value="transparent">Transparent</option>
+                                <option value="solid">Solid Color</option>
+                                <option value="blur">Blur</option>
+                                <option value="custom">Custom Image</option>
+                            </select>
+                        </div>
+
+                        <div id="colorPicker" class="mb-3 d-none">
+                            <label class="form-label small fw-bold">Background Color</label>
+                            <input type="color" class="form-control form-control-sm form-control-color w-100" id="bgColor" value="#ffffff">
+                        </div>
+
+                        <div>
+                            <label class="form-label small fw-bold">Adjustments</label>
+                            <div class="slider-control py-2">
+                                <label class="small">
+                                    Brightness
+                                    <span class="slider-value" id="brightnessValue">100%</span>
+                                </label>
+                                <input type="range" class="form-range" name="brightness" id="brightness" 
+                                    min="0" max="200" value="100" oninput="updatePreview(this)">
+                            </div>
+                            <div class="slider-control py-2">
+                                <label class="small">
+                                    Contrast
+                                    <span class="slider-value" id="contrastValue">100%</span>
+                                </label>
+                                <input type="range" class="form-range" name="contrast" id="contrast" 
+                                    min="0" max="200" value="100" oninput="updatePreview(this)">
+                            </div>
+                            <div class="slider-control py-2">
+                                <label class="small">
+                                    Blur Amount
+                                    <span class="slider-value" id="blurValue">5px</span>
+                                </label>
+                                <input type="range" class="form-range" name="blur" id="blur" 
+                                    min="0" max="20" value="5" oninput="updatePreview(this)">
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-1 mt-2">
+                            <button class="btn btn-primary btn-custom" id="processBtn">
+                                <i class="fas fa-magic me-1"></i>Process
+                            </button>
+                            <button class="btn btn-success btn-custom d-none" id="downloadBtn">
+                                <i class="fas fa-download me-1"></i>Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="tool-card">
+                    <h4 class="mb-4">Result</h4>
+                    <div class="result-preview" id="resultContainer">
+                        <p class="text-muted">Processed image will appear here</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const previewContainer = document.getElementById('previewContainer');
+            const previewImage = document.getElementById('previewImage');
+            const bgType = document.getElementById('bgType');
+            const colorPicker = document.getElementById('colorPicker');
+            const processBtn = document.getElementById('processBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+
+            // Handle file upload
+            dropZone.addEventListener('click', () => fileInput.click());
+            
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#4a90e2';
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.style.borderColor = '#e0e0e0';
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#e0e0e0';
+                const files = e.dataTransfer.files;
+                handleFile(files[0]);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFile(e.target.files[0]);
+            });
+
+            function handleFile(file) {
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        previewImage.src = e.target.result;
+                        previewContainer.classList.remove('d-none');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            // Handle background type change
+            bgType.addEventListener('change', () => {
+                colorPicker.classList.toggle('d-none', bgType.value !== 'solid');
+            });
+
+            // Handle process button
+            processBtn.addEventListener('click', async () => {
+                try {
+                    const formData = new FormData();
+                    const file = fileInput.files[0];
+                    if (!file) {
+                        alert('Please select an image first');
+                        return;
+                    }
+
+                    formData.append('image', file);
+                    formData.append('bgType', bgType.value);
+                    formData.append('brightness', document.getElementById('brightness').value);
+                    formData.append('contrast', document.getElementById('contrast').value);
+                    formData.append('blur', document.getElementById('blur').value);
+                    
+                    if (bgType.value === 'solid') {
+                        formData.append('bgColor', document.getElementById('bgColor').value);
+                    }
+
+                    // Show processing state
+                    processBtn.disabled = true;
+                    processBtn.innerHTML = '<i class="fas fa-cog animate-spin me-1"></i>Processing...';
+
+                    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                    const response = await fetch('{% url "background_removal" %}', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        },
+                        credentials: 'same-origin'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const resultImg = document.createElement('img');
+                        resultImg.src = data.image_url;
+                        resultImg.classList.add('img-fluid');
+                        
+                        const resultContainer = document.getElementById('resultContainer');
+                        resultContainer.innerHTML = '';
+                        resultContainer.appendChild(resultImg);
+                        
+                        downloadBtn.classList.remove('d-none');
+                        downloadBtn.onclick = () => {
+                            const filename = data.image_url.split('/').pop();
+                            window.location.href = `/download/${filename}/`;
+                        };
+                    } else {
+                        throw new Error(data.error);
+                    }
+                } catch (error) {
+                    alert('Error processing image: ' + error.message);
+                } finally {
+                    processBtn.disabled = false;
+                    processBtn.innerHTML = '<i class="fas fa-magic me-1"></i>Process';
+                }
+            });
+
+            function updatePreview(input) {
+                const previewImage = document.getElementById('previewImage');
+                const value = input.value;
+                
+                // Update value display
+                document.getElementById(`${input.id}Value`).textContent = 
+                    input.id === 'blur' ? `${value}px` : `${value}%`;
+
+                // Apply live preview effects
+                let filters = [];
+                const brightness = document.getElementById('brightness').value;
+                const contrast = document.getElementById('contrast').value;
+                const blur = document.getElementById('blur').value;
+
+                filters.push(`brightness(${brightness}%)`);
+                filters.push(`contrast(${contrast}%)`);
+                
+                if (bgType.value === 'blur') {
+                    filters.push(`blur(${blur}px)`);
+                }
+
+                previewImage.style.filter = filters.join(' ');
+            }
+
+            // Initialize preview on background type change
+            bgType.addEventListener('change', () => {
+                colorPicker.classList.toggle('d-none', bgType.value !== 'solid');
+                updatePreview(document.getElementById('brightness')); // Refresh preview
+            });
+
+            // Initialize color picker preview
+            document.getElementById('bgColor').addEventListener('input', function(e) {
+                if (bgType.value === 'solid') {
+                    previewContainer.style.backgroundColor = e.target.value;
+                }
+            });
+
+            // Initialize tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+        });
+    </script>
+</body>
+</html>
