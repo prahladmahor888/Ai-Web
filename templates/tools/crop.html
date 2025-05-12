@@ -291,7 +291,7 @@
     
             formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
     
-            fetch('{% url "crop" %}', {
+            fetch('{% url "image_ai:crop" %}', {
                 method: 'POST',
                 body: formData
             })

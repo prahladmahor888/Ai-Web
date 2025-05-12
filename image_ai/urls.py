@@ -3,9 +3,9 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from . import views
-from .views import remove_watermark
+from .views import remove_watermark, background_removal
 
-app_name = 'image_ai'
+app_name = "image_ai"
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -24,6 +24,7 @@ urlpatterns = [
     path('convert-file/', views.convert_file, name='convert_file'),
     path('watermark/', views.remove_watermark, name='watermark'),
     path('remove-watermark/', remove_watermark, name='remove_watermark'),
+    path('background-removal/', background_removal, name='background_removal'),
     
 ] +  static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
